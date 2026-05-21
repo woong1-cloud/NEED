@@ -2,11 +2,18 @@
 
 구글 시트 실시간 연동 + 보고용 HTML 대시보드입니다.
 
-## 팀 공유 URL
+## 팀 공유 URL (Railway — 권장)
 
-**https://woong1-cloud.github.io/NEED/**
+Railway에 배포된 서비스 URL을 사용합니다. (저장소 연결 후 자동 배포)
 
-상세판 직접 링크: **https://woong1-cloud.github.io/NEED/commerce_dashboard_report_detail.html**
+- 메인: `https://<서비스명>.up.railway.app/`
+- 상세판: `https://<서비스명>.up.railway.app/commerce_dashboard_report_detail.html`
+
+Railway 대시보드 → **NEED** 서비스 → **Settings → Networking → Generate Domain** 으로 공개 URL을 발급하세요.
+
+## GitHub Pages (보조)
+
+**https://woong1-cloud.github.io/NEED/** (Settings → Pages에서 gh-pages 브랜치 설정 필요)
 
 ## 데이터 소스
 

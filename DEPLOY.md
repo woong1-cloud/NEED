@@ -1,6 +1,27 @@
 # 팀 배포 가이드
 
-로컬 커밋은 완료되었습니다. **GitHub에 push**하면 Actions가 자동으로 Pages에 배포합니다.
+## Railway 배포 (권장 · 팀 실사용)
+
+저장소: https://github.com/woong1-cloud/NEED
+
+1. [Railway](https://railway.com) → 프로젝트에 **GitHub 저장소 NEED** 연결 (이미 연결됨)
+2. `main` 브랜치 push 시 자동 빌드·배포 (`npm start` → Express 정적 서버)
+3. 서비스 → **Settings → Networking → Generate Domain** → 발급 URL을 팀에 공유
+4. 헬스체크: `https://<도메인>/health`
+
+로컬 확인:
+
+```bash
+npm install
+npm start
+# http://localhost:3000
+```
+
+---
+
+## GitHub Pages (보조)
+
+**GitHub에 push**하면 Actions가 `gh-pages` 브랜치에 배포합니다.
 
 ## 1단계: GitHub 저장소 만들기
 
