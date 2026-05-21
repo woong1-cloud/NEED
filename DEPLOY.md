@@ -14,7 +14,7 @@
 ```powershell
 cd "c:\Users\han_jiwoong\Desktop\cursor\need"
 
-git remote add origin https://github.com/<본인아이디>/commerce-dashboard.git
+git remote add origin https://github.com/woong1-cloud/NEED.git
 git push -u origin main
 ```
 
@@ -27,13 +27,13 @@ git push -u origin main
 ## 팀 공유 URL
 
 ```
-https://<본인아이디>.github.io/commerce-dashboard/
+https://woong1-cloud.github.io/NEED/
 ```
 
 또는
 
 ```
-https://<본인아이디>.github.io/commerce-dashboard/commerce_dashboard_report_detail.html
+https://woong1-cloud.github.io/NEED/commerce_dashboard_report_detail.html
 ```
 
 ## 시트 권한 (필수)

@@ -2,13 +2,11 @@
 
 구글 시트 실시간 연동 + 보고용 HTML 대시보드입니다.
 
-## 팀 공유 URL (배포 후)
+## 팀 공유 URL
 
-GitHub Pages를 켜면 아래 주소로 접속합니다.
+**https://woong1-cloud.github.io/NEED/**
 
-`https://<GitHub아이디>.github.io/<저장소이름>/`
-
-또는 `.../commerce_dashboard_report_detail.html`
+상세판 직접 링크: **https://woong1-cloud.github.io/NEED/commerce_dashboard_report_detail.html**
 
 ## 데이터 소스
 
