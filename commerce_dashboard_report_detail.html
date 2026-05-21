@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>커머스 지표 대시보드 (상세판) · 보고용</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;--card:#ffffff;--ink:#0f172a;--sub:#64748b;--line:#e2e8f0;
+      --green:#16a34a;--red:#dc2626;--violet:#7c3aed;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Noto Sans KR",sans-serif}
+    .wrap{max-width:1400px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+    .hint{color:var(--sub);font-size:12px}
+    .up{color:var(--green)} .down{color:var(--red)}
+    .load-status{font-size:12px;color:var(--sub);padding:8px 12px;background:#fff;border:1px solid var(--line);border-radius:8px}
+    .load-status.err{color:var(--red);border-color:#fecaca;background:#fef2f2}
+    .btn-refresh{margin-left:8px;padding:4px 10px;font-size:11px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+    .btn-refresh:hover{background:#f1f5f9}
+
+    .kpi-core-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+    .kpi-core-h{margin:0 0 4px;font-size:15px;font-weight:700}
+    .kpi-core-meta{margin:0 0 10px;font-size:12px;color:var(--sub);line-height:1.45}
+    .table-wrap{overflow:auto}
+    .kpi-core-table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+    .kpi-core-table th,.kpi-core-table td{border:1px solid var(--line);padding:10px 12px;text-align:right;vertical-align:middle}
+    .kpi-core-table th:first-child,.kpi-core-table td:first-child{text-align:left;font-weight:600}
+    .kpi-core-table thead th{background:#f1f5f9;color:#334155;font-weight:600}
+    .kpi-core-table tbody tr:nth-child(even){background:#fafbfc}
+    .kpi-pct{display:inline-block;min-width:3.2em;font-weight:700;padding:2px 8px;border-radius:6px;font-size:12px}
+    .kpi-pct.ok{background:#ecfdf3;color:#166534}
+    .kpi-pct.bad{background:#fef2f2;color:#b91c1c}
+    .kpi-gr{font-weight:600}
+    .kpi-gr.up{color:var(--green)}
+    .kpi-gr.down{color:var(--red)}
+
+    .detail-header{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .detail-title{font-size:18px;font-weight:700}
+    .detail-sub{font-size:12px;color:var(--sub);margin-top:4px}
+    .detail-toolbar{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+    .detail-controls{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .chip{font-size:12px;background:#f1f5f9;border:1px solid var(--line);color:#475569;padding:7px 12px;border-radius:999px;cursor:pointer;font-weight:600}
+    .chip:hover{background:#e2e8f0}
+    .chip.active{background:var(--violet);border-color:var(--violet);color:#fff}
+    .cmp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+    .cmp-btns{display:flex;gap:4px}
+    .cmp-btn{font-size:11px;background:#fff;border:1px solid var(--line);color:#64748b;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+    .cmp-btn.active{background:#eef2ff;border-color:#c7d2fe;color:#4338ca}
+    .dsec{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .dsec-title{font-size:14px;font-weight:700;margin-bottom:10px}
+    .dgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .dgrid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .dk,.dcard{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}
+    .dk .k,.dcard .k{font-size:12px;color:var(--sub)}
+    .dk .v{font-size:24px;font-weight:700;margin:4px 0}
+    .dcard .v{font-size:22px;font-weight:700;margin:4px 0}
+    .dk .c,.dcard .c{font-size:12px;line-height:1.45}
+
+    .snapshot-row{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--sub)}
+    .snapshot-row.show{display:flex}
+    .snapshot-row label{font-weight:600;color:var(--ink)}
+    .snapshot-row input[type="date"]{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff}
+
+    @media (max-width:1100px){.dgrid3,.dgrid2{grid-template-columns:1fr 1fr}}
+    @media (max-width:760px){.dgrid3,.dgrid2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="loadStatus" class="load-status">
+      구글 시트 데이터 불러오는 중…
+      <button type="button" class="btn-refresh" id="btnRefresh">새로고침</button>
+    </div>
+
+    <div class="detail-header">
+      <div>
+        <div class="detail-title">커머스 지표 대시보드 (상세판)</div>
+        <div class="detail-sub" id="detailPeriodSub">—</div>
+      </div>
+      <div class="detail-toolbar">
+        <div class="detail-controls">
+          <button type="button" class="chip active" data-mode="monthly">월 누적</button>
+          <button type="button" class="chip" data-mode="weekly">주간</button>
+          <button type="button" class="chip" data-mode="daily">일별 조회</button>
+        </div>
+        <div class="cmp-row">
+          <span>비교 기준</span>
+          <div class="cmp-btns">
+            <button type="button" class="cmp-btn active" data-cmp="year">전년</button>
+            <button type="button" class="cmp-btn" data-cmp="week">전주</button>
+          </div>
+          <span class="hint" id="detailCmpHint">매출 비교: 누적 전년 동기 · 당일 전년 동요일</span>
+        </div>
+        <div id="dailySnapshotRow" class="snapshot-row">
+          <label for="detailDailyDateInput">스냅샷 기준일</label>
+          <input type="date" id="detailDailyDateInput" />
+          <span class="hint">선택한 일자 기준 당일 지표</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-title">매출 / UV</div>
+      <div class="dgrid2">
+        <div class="dk">
+          <div class="k" id="detailSalesAccK">총 매출 (누적)</div>
+          <div class="v" id="detailSalesAccV">—</div>
+          <div class="c" id="detailSalesAccC">—</div>
+        </div>
+        <div class="dk">
+          <div class="k" id="detailSalesDayK">총 매출 (당일)</div>
+          <div class="v" id="detailSalesDayV">—</div>
+          <div class="c" id="detailSalesDayC">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-title">핵심 지표 - 유입 / 전환 / 객단가</div>
+      <div class="dgrid3">
+        <div class="dcard">
+          <div class="k">유입 (UV)</div>
+          <div class="v" id="detailUvV">—</div>
+          <div class="c" id="detailUvC">—</div>
+          <div class="c hint" id="detailUvCmp" style="margin-top:4px;"></div>
+        </div>
+        <div class="dcard">
+          <div class="k">전환율</div>
+          <div class="v" id="detailCvV">—</div>
+          <div class="c" id="detailCvC">—</div>
+          <div class="c hint" id="detailCvCmp" style="margin-top:4px;"></div>
+        </div>
+        <div class="dcard">
+          <div class="k">객단가</div>
+          <div class="v" id="detailAovV">—</div>
+          <div class="c" id="detailAovC">—</div>
+          <div class="c hint" id="detailAovCmp" style="margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="kpi-core-card">
+      <h2 class="kpi-core-h">핵심 지표 (상세)</h2>
+      <p class="kpi-core-meta" id="kpiTableMeta">—</p>
+      <div class="table-wrap">
+        <table class="kpi-core-table">
+          <thead>
+            <tr>
+              <th>핵심지표</th>
+              <th>실적</th>
+              <th>목표</th>
+              <th>달성률</th>
+              <th id="kpiFilterColHead">전년 실적</th>
+              <th id="kpiGrowthColHead">성장률(전년 대비)</th>
+            </tr>
+          </thead>
+          <tbody id="kpiTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- file:// 에서도 즉시 표시용 로컬 백업 (같은 폴더) -->
+  <script src="dashboard_data.js"></script>
+
+  <script>
+    const SHEET_ID = "1yialQ3E-BoqLcr9WSjncdVpf0KkDgLYWS8xq9tOw6Z8";
+    const SHEETS = {
+      target: "목표값",
+      prevYear: "전년 비교",
+      current: "올해값"
+    };
+
+    const fmt = n => Math.round(n).toLocaleString("ko-KR");
+    const fmtPct = n => (Math.round(n * 10) / 10).toLocaleString("ko-KR") + "%";
+    const fmtMan = n => {
+      if (n >= 100000000) return (Math.round(n / 10000000) / 10).toLocaleString("ko-KR") + "억원";
+      if (n >= 10000) return (Math.round(n / 10000)).toLocaleString("ko-KR") + "만원";
+      return fmt(n) + "원";
+    };
+    const fmtUv = n => {
+      if (n >= 10000) return (Math.round(n / 1000) / 10).toLocaleString("ko-KR") + "만";
+      return fmt(n);
+    };
+
+    let dataStore = { target: {}, prev: {}, current: {} };
+    let sortedCurrentDays = [];
+    let referenceDate = "";
+    let dataAnchorDate = "";
+    let detailMode = "monthly";
+    let detailCmp = "year";
+    let isDataReady = false;
+
+    function todayYmd() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function resolveDataAnchor(today) {
+      const eligible = sortedCurrentDays.filter(d => d <= today);
+      return eligible.length ? eligible[eligible.length - 1] : (sortedCurrentDays[sortedCurrentDays.length - 1] || today);
+    }
+
+    function parseCSVLine(line) {
+      const cols = [];
+      let cur = "", inQ = false;
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j];
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (ch === "," && !inQ) { cols.push(cur.trim()); cur = ""; }
+        else cur += ch;
+      }
+      cols.push(cur.trim());
+      return cols;
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+      if (!lines.length) return { headers: [], rows: [] };
+      const headers = parseCSVLine(lines[0]);
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) rows.push(parseCSVLine(lines[i]));
+      return { headers, rows };
+    }
+
+    function normHeader(s) {
+      return String(s || "").replace(/\s/g, "").toLowerCase();
+    }
+
+    function headerIndex(headers, names) {
+      const norm = headers.map(normHeader);
+      for (const name of names) {
+        const i = norm.indexOf(normHeader(name));
+        if (i >= 0) return i;
+      }
+      return -1;
+    }
+
+    function gvizToRows(payload) {
+      if (!payload || !payload.table) return { headers: [], rows: [] };
+      const headers = (payload.table.cols || []).map(c => (c.label || "").trim());
+      const rows = (payload.table.rows || []).map(row => {
+        return (row.c || []).map(cell => {
+          if (!cell) return "";
+          if (cell.v != null && cell.v !== "") return String(cell.v);
+          return cell.f != null ? String(cell.f) : "";
+        });
+      });
+      return { headers, rows };
+    }
+
+    const FETCH_MS = 15000;
+    const gvizPending = new Map();
+    let gvizReqSeq = 0;
+
+    function ensureGvizJsonpRouter() {
+      window.google = window.google || {};
+      window.google.visualization = window.google.visualization || {};
+      window.google.visualization.Query = window.google.visualization.Query || {};
+      if (window.__gvizRouterInstalled) return;
+      window.google.visualization.Query.setResponse = function (payload) {
+        const id = payload && payload.reqId != null ? String(payload.reqId) : "";
+        const handler = gvizPending.get(id);
+        if (!handler) return;
+        gvizPending.delete(id);
+        handler(payload);
+      };
+      window.__gvizRouterInstalled = true;
+    }
+
+    function gvizPayloadToTable(payload, sheetName) {
+      if (!payload) throw new Error(`${sheetName}: 응답 없음`);
+      if (payload.status === "error") {
+        const err = (payload.errors && payload.errors[0]) || {};
+        throw new Error(`${sheetName}: ${err.detailed_message || err.message || "시트 오류"}`);
+      }
+      return gvizToRows(payload);
+    }
+
+    function fetchWithTimeout(url, ms) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, { signal: ctrl.signal, cache: "no-store", mode: "cors" })
+        .finally(() => clearTimeout(timer));
+    }
+
+    function parseGvizText(text) {
+      const m = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
+      if (!m) throw new Error("시트 응답 형식 오류");
+      return gvizPayloadToTable(JSON.parse(m[1]), "시트");
+    }
+
+    async function fetchSheetGvizFetch(sheetName) {
+      const q = new URLSearchParams({ tqx: "out:json", headers: "1", sheet: sheetName, _: Date.now() });
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${q}`;
+      const res = await fetchWithTimeout(url, FETCH_MS);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return parseGvizText(await res.text());
+    }
+
+    /** file://·일부 환경: fetch CORS 차단 → script(JSONP)로 우회 */
+    function fetchSheetGvizJsonp(sheetName) {
+      ensureGvizJsonpRouter();
+      const reqId = String(++gvizReqSeq);
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          gvizPending.delete(reqId);
+          reject(new Error(`${sheetName}: JSONP 타임아웃(${FETCH_MS / 1000}초)`));
+        }, FETCH_MS);
+
+        gvizPending.set(reqId, payload => {
+          clearTimeout(timer);
+          try {
+            resolve(gvizPayloadToTable(payload, sheetName));
+          } catch (e) {
+            reject(e);
+          }
+        });
+
+        const q = new URLSearchParams({
+          tqx: `out:json;headers:1;reqId:${reqId}`,
+          sheet: sheetName,
+          _: String(Date.now())
+        });
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${q}`;
+        script.onerror = () => {
+          clearTimeout(timer);
+          gvizPending.delete(reqId);
+          script.remove();
+          reject(new Error(`${sheetName}: JSONP 스크립트 로드 실패`));
+        };
+        script.onload = () => setTimeout(() => script.remove(), 0);
+        document.head.appendChild(script);
+      });
+    }
+
+    async function fetchSheetCsv(sheetName) {
+      const q = new URLSearchParams({ tqx: "out:csv", sheet: sheetName, _: Date.now() });
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${q}`;
+      const res = await fetchWithTimeout(url, FETCH_MS);
+      if (!res.ok) throw new Error("CSV HTTP " + res.status);
+      const table = parseCSV(await res.text());
+      if (!table.rows.length) throw new Error("CSV 비어 있음");
+      return table;
+    }
+
+    async function fetchSheet(sheetName) {
+      const errors = [];
+      try {
+        return await fetchSheetGvizFetch(sheetName);
+      } catch (e1) {
+        errors.push("fetch:" + e1.message);
+      }
+      try {
+        return await fetchSheetGvizJsonp(sheetName);
+      } catch (e2) {
+        errors.push("jsonp:" + e2.message);
+      }
+      try {
+        return await fetchSheetCsv(sheetName);
+      } catch (e3) {
+        errors.push("csv:" + e3.message);
+      }
+      throw new Error(`${sheetName}: ${errors.join(" · ")}`);
+    }
+
+    function applyRawBundle(bundle, sourceLabel) {
+      const toTable = (name, rawRows) => {
+        if (rawRows && rawRows.headers) return rawRows;
+        return { headers: [], rows: rawRows || [] };
+      };
+      dataStore._target = toTable("target", bundle.target);
+      dataStore._prev = toTable("prev", bundle.prev);
+      dataStore._current = toTable("current", bundle.current);
+      buildMaps();
+      return sourceLabel;
+    }
+
+    function loadLocalFallback() {
+      if (!window.__DASHBOARD_FALLBACK__) return null;
+      const b = window.__DASHBOARD_FALLBACK__;
+      return applyRawBundle(b, "로컬 백업(" + (b.savedAt || "").slice(0, 10) + ")");
+    }
+
+    function num(s) {
+      if (s == null || s === "") return 0;
+      return Number(String(s).replace(/[%,₩\s]/g, "").replace(/,/g, "")) || 0;
+    }
+
+    /** 전환율: "4%", "2.11%" 또는 gviz 소수(0.0421 → 4.21%) */
+    function numPct(s) {
+      const raw = String(s ?? "").trim();
+      if (!raw) return 0;
+      if (raw.includes("%")) return num(raw);
+      const n = num(raw);
+      if (n > 0 && n <= 1) return n * 100;
+      return n;
+    }
+
+    function dateKey(s) {
+      const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
+    }
+
+    function shiftYear(ymd, delta) {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return `${y + delta}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+
+    function addDays(ymd, n) {
+      const dt = new Date(ymd + "T12:00:00");
+      dt.setDate(dt.getDate() + n);
+      return dt.toISOString().slice(0, 10);
+    }
+
+    function parseYMD(s) {
+      const p = s.split("-").map(Number);
+      return new Date(p[0], p[1] - 1, p[2]);
+    }
+
+    const DOW_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
+    function dowOf(ymd) {
+      return parseYMD(ymd).getDay();
+    }
+
+    function dowLabel(ymd) {
+      return DOW_KO[dowOf(ymd)];
+    }
+
+    function fmtYmdDow(ymd) {
+      return `${fmtDotDate(ymd)}(${dowLabel(ymd)})`;
+    }
+
+    function dayDiff(a, b) {
+      return Math.round((parseYMD(a) - parseYMD(b)) / 86400000);
+    }
+
+    /** 일별 전년: 기념일(−1년) 기준 ±3일 안에서 동요일 탐색 (PRD 6.3) */
+    function sameWeekdayPriorYear(ymd) {
+      const anchorDow = dowOf(ymd);
+      const base = shiftYear(ymd, -1);
+      for (let i = 0; i <= 3; i++) {
+        const offs = i === 0 ? [0] : [-i, i];
+        for (const off of offs) {
+          const cand = addDays(base, off);
+          if (dowOf(cand) === anchorDow) return cand;
+        }
+      }
+      return base;
+    }
+
+    /** 기간 모드별 비교일: 일별 전년=동요일, 월·주 전년=동일 달력일(동기간/동주) */
+    function getCompareKey(curYmd) {
+      if (detailCmp === "week") return addDays(curYmd, -7);
+      if (detailMode === "daily") return sameWeekdayPriorYear(curYmd);
+      return shiftYear(curYmd, -1);
+    }
+
+    function getCompareMap() {
+      return detailCmp === "week" ? dataStore.current : dataStore.prev;
+    }
+
+    function validateComparePair(curYmd, cmpKey) {
+      const cmpMap = getCompareMap();
+      const data = cmpMap[cmpKey];
+      const issues = [];
+      if (!data) issues.push(`비교 데이터 없음 (${cmpKey})`);
+      if (detailCmp === "year" && detailMode === "daily") {
+        if (dowOf(curYmd) !== dowOf(cmpKey)) issues.push("동요일 불일치");
+        const ann = shiftYear(curYmd, -1);
+        if (Math.abs(dayDiff(cmpKey, ann)) > 3) issues.push("전년 비교일이 기념일 ±3일 범위를 벗어남");
+      }
+      return { cmpKey, data, ok: !!data && !issues.length, issues };
+    }
+
+    function fmtDotDate(ymd) {
+      const [y, m, d] = ymd.split("-");
+      return `${y}.${m}.${d}`;
+    }
+
+    /** 시트 공통 A~G: 일자·매출·주문·품목·유입·전환율·객단가 */
+    const COL_FALLBACK = { date: 0, sales: 1, orders: 2, items: 3, uv: 4, cvr: 5, aov: 6 };
+
+    function resolveCols(headers) {
+      const pick = names => headerIndex(headers, names);
+      const cols = {
+        date: pick(["일자"]),
+        sales: pick(["매출액", "매출", "목표매출액", "목표합계", "결제합계", "순매출"]),
+        orders: pick(["주문수"]),
+        items: pick(["품목수"]),
+        uv: pick(["유입", "uv"]),
+        cvr: pick(["전환율"]),
+        aov: pick(["객단가"])
+      };
+      Object.keys(COL_FALLBACK).forEach(k => {
+        if (cols[k] == null || cols[k] < 0) cols[k] = COL_FALLBACK[k];
+      });
+      return cols;
+    }
+
+    function rowToMetrics(row, col, opts) {
+      const d = dateKey(row[col.date]);
+      if (!d) return null;
+      const sales = num(row[col.sales]);
+      const orders = num(row[col.orders]);
+      const uv = num(row[col.uv]);
+      if (opts.requireOrders && orders <= 0) return null;
+      if (opts.minSales && sales < opts.minSales) return null;
+
+      let cvr = numPct(row[col.cvr]);
+      if (!cvr && uv > 0 && orders > 0) cvr = (orders / uv) * 100;
+      let aov = num(row[col.aov]);
+      if (!aov && orders > 0 && sales > 0) aov = sales / orders;
+
+      if (!sales && !orders && !uv) return null;
+      return { sales, orders, uv, cvr, aov };
+    }
+
+    function ingestRows(rows, headers, map, opts) {
+      const col = resolveCols(headers);
+      rows.forEach(r => {
+        const m = rowToMetrics(r, col, opts);
+        if (!m) return;
+        const d = dateKey(r[col.date]);
+        map[d] = m;
+      });
+    }
+
+    function buildMaps() {
+      const target = {}, prev = {}, current = {};
+
+      const tgt = dataStore._target || { headers: [], rows: [] };
+      ingestRows(tgt.rows, tgt.headers, target, { minSales: 1 });
+      Object.keys(target).forEach(d => {
+        const t = target[d];
+        if (!t.orders && t.uv && t.cvr) t.orders = t.uv * (t.cvr / 100);
+        if (!t.cvr) t.cvr = 4;
+        if (!t.aov) t.aov = 55000;
+      });
+
+      const py = dataStore._prev || { headers: [], rows: [] };
+      ingestRows(py.rows, py.headers, prev, { minSales: 1 });
+
+      const cur = dataStore._current || { headers: [], rows: [] };
+      ingestRows(cur.rows, cur.headers, current, { requireOrders: true, minSales: 100000 });
+
+      dataStore = { target, prev, current };
+      sortedCurrentDays = Object.keys(current).sort();
+      referenceDate = todayYmd();
+      dataAnchorDate = resolveDataAnchor(referenceDate);
+    }
+
+    function agg(days, map) {
+      let sales = 0, orders = 0, uv = 0, aovW = 0, cvrSum = 0, cvrCnt = 0, matched = 0;
+      days.forEach(d => {
+        const x = map[d];
+        if (!x) return;
+        matched++;
+        sales += x.sales;
+        orders += x.orders;
+        uv += x.uv;
+        if (x.orders > 0) aovW += x.aov * x.orders;
+        if (x.cvr > 0) { cvrSum += x.cvr; cvrCnt++; }
+      });
+      let cvr = 0;
+      if (uv > 0 && orders > 0) cvr = (orders / uv) * 100;
+      else if (cvrCnt) cvr = cvrSum / cvrCnt;
+      return {
+        sales, orders, uv,
+        cvr,
+        aov: orders ? aovW / orders : 0,
+        matched
+      };
+    }
+
+    function growthPct(act, cmp) {
+      if (cmp == null || cmp === "" || !isFinite(cmp)) return null;
+      return ((act - cmp) / cmp) * 100;
+    }
+
+    /** 전환율 비교: % 변화율이 아니라 %p(실적−비교) 차이 */
+    function growthCvrPp(act, cmp) {
+      if (cmp == null || cmp === "" || !isFinite(cmp)) return null;
+      return act - cmp;
+    }
+
+    function fmtGrowth(g) {
+      if (g == null || !isFinite(g)) return { text: "—", cls: "" };
+      const s = (Math.round(g * 10) / 10).toLocaleString("ko-KR");
+      const text = (g >= 0 ? "+" : "") + s + "%";
+      return { text, cls: g > 0 ? "up" : g < 0 ? "down" : "" };
+    }
+
+    function fmtGrowthPp(pp) {
+      if (pp == null || !isFinite(pp)) return { text: "—", cls: "" };
+      const s = (Math.round(pp * 10) / 10).toLocaleString("ko-KR");
+      const text = (pp >= 0 ? "+" : "") + s + "%p";
+      return { text, cls: pp > 0 ? "up" : pp < 0 ? "down" : "" };
+    }
+
+    function achPct(act, tgt) {
+      return tgt ? (act / tgt) * 100 : 0;
+    }
+
+    function ymdFromDate(dt) {
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    }
+
+    function getPrevWeekMonSun(anchorYmd) {
+      const d = new Date(anchorYmd + "T12:00:00");
+      const dow = d.getDay();
+      const toMonday = dow === 0 ? -6 : 1 - dow;
+      const thisMon = new Date(d);
+      thisMon.setDate(d.getDate() + toMonday);
+      const prevMon = new Date(thisMon);
+      prevMon.setDate(thisMon.getDate() - 7);
+      const prevSun = new Date(prevMon);
+      prevSun.setDate(prevMon.getDate() + 6);
+      return { mon: ymdFromDate(prevMon), sun: ymdFromDate(prevSun) };
+    }
+
+    function daysBetween(startYmd, endYmd) {
+      const out = [];
+      let cur = startYmd;
+      while (cur <= endYmd) {
+        out.push(cur);
+        cur = addDays(cur, 1);
+      }
+      return out;
+    }
+
+    function getRangeDays() {
+      if (!referenceDate) return [];
+      if (detailMode === "daily") {
+        const v = document.getElementById("detailDailyDateInput").value || referenceDate;
+        return [v];
+      }
+      if (detailMode === "weekly") {
+        const { mon, sun } = getPrevWeekMonSun(referenceDate);
+        return daysBetween(mon, sun).filter(d => dataStore.current[d]);
+      }
+      const monthStart = referenceDate.slice(0, 8) + "01";
+      return sortedCurrentDays.filter(d => d >= monthStart && d <= referenceDate);
+    }
+
+    function getCompareDays(rangeDays) {
+      return rangeDays.map(d => getCompareKey(d));
+    }
+
+    function getDayPair(ymd) {
+      const cur = dataStore.current[ymd];
+      const tgt = dataStore.target[ymd];
+      const v = validateComparePair(ymd, getCompareKey(ymd));
+      return {
+        cur, tgt, cmp: v.data, cmpKey: v.cmpKey,
+        compareOk: v.ok, compareIssues: v.issues
+      };
+    }
+
+    function buildCompareHintText(vm) {
+      const cmpLabel = detailCmp === "year" ? "전년" : "전주";
+      if (detailMode === "daily") {
+        const dayPair = vm.day;
+        const arrow = `${fmtYmdDow(vm.lastDay)} → ${cmpLabel} ${fmtYmdDow(dayPair.cmpKey)}`;
+        if (dayPair.compareOk) return `일별 비교: ${arrow} (동요일·데이터 확인)`;
+        return `일별 비교: ${arrow} · ${(dayPair.compareIssues || []).join(" · ")}`;
+      }
+      if (detailMode === "monthly") {
+        return detailCmp === "year"
+          ? "월 누적 비교: 전년 동일 기간(달력일 −1년)"
+          : "월 누적 비교: 직전 주 동기간";
+      }
+      return detailCmp === "year"
+        ? "주간 비교: 전년 동주(달력일 −1년)"
+        : "주간 비교: 직전 주 동구간";
+    }
+
+    function buildViewModel() {
+      const rangeDays = getRangeDays();
+      const cmpDays = getCompareDays(rangeDays);
+      const cmpMap = getCompareMap();
+      const act = agg(rangeDays, dataStore.current);
+      const tgt = agg(rangeDays, dataStore.target);
+      const cmp = agg(cmpDays, cmpMap);
+      const cmpMatched = cmp.matched;
+      const cmpExpected = cmpDays.length;
+
+      const lastDay = detailMode === "daily"
+        ? (document.getElementById("detailDailyDateInput").value || referenceDate)
+        : dataAnchorDate;
+      const prevDayKey = addDays(lastDay, -1);
+      const day = getDayPair(lastDay);
+      const prevPair = getDayPair(prevDayKey);
+      const prevDay = {
+        cur: prevPair.cur, tgt: prevPair.tgt, cmp: prevPair.cmp,
+        cmpKey: prevPair.cmpKey, compareOk: prevPair.compareOk
+      };
+
+      const accLabel = detailMode === "monthly" ? "누적" : detailMode === "weekly" ? "주간 합계" : "당일";
+      const dayLabel = detailMode === "daily" ? "전일" : "당일";
+
+      return {
+        rangeDays, cmpDays, act, tgt, cmp, cmpMatched, cmpExpected,
+        day, prevDay, lastDay, prevDayKey, accLabel, dayLabel,
+        compareHint: buildCompareHintText({ lastDay, day })
+      };
+    }
+
+    function goalHint(act, tgt, isPct) {
+      const p = achPct(act, tgt);
+      if (isPct) return p >= 100 ? "목표 달성" : "목표 미달";
+      return p >= 100 ? "목표 초과" : "목표 미달";
+    }
+
+    function renderKpiTable(vm) {
+      const cmpLabel = detailCmp === "year" ? "전년" : "전주";
+      document.getElementById("kpiFilterColHead").textContent = cmpLabel + " 실적";
+      document.getElementById("kpiGrowthColHead").textContent = `성장률(${cmpLabel} 대비)`;
+
+      const rows = [
+        { label: vm.accLabel + "매출", act: vm.act.sales, tgt: vm.tgt.sales, cmp: vm.cmp.sales, isPercent: false, isCvr: false },
+        ...(detailMode !== "daily" ? [{
+          label: vm.dayLabel + "매출",
+          act: (vm.day.cur?.sales || 0),
+          tgt: (vm.day.tgt?.sales || 0),
+          cmp: (vm.day.cmp?.sales || 0),
+          isPercent: false,
+          isCvr: false
+        }] : []),
+        { label: vm.accLabel + " 유입(UV)", act: vm.act.uv, tgt: vm.tgt.uv, cmp: vm.cmp.uv, isPercent: false, isCvr: false },
+        {
+          label: vm.accLabel + " 전환율",
+          act: detailMode === "daily" ? (vm.day.cur?.cvr ?? vm.act.cvr) : vm.act.cvr,
+          tgt: detailMode === "daily" ? (vm.day.tgt?.cvr || vm.tgt.cvr || 4) : (vm.tgt.cvr || 4),
+          cmp: detailMode === "daily" ? (vm.day.cmp?.cvr ?? vm.cmp.cvr) : vm.cmp.cvr,
+          isPercent: true,
+          isCvr: true
+        },
+        { label: vm.accLabel + " 객단가", act: vm.act.aov, tgt: vm.tgt.aov || 55000, cmp: vm.cmp.aov, isPercent: false, isCvr: false }
+      ];
+
+      const tbody = document.getElementById("kpiTableBody");
+      tbody.innerHTML = "";
+      rows.forEach(row => {
+        const pct = achPct(row.act, row.tgt);
+        const achCls = pct >= 100 ? "ok" : "bad";
+        const g = row.isCvr
+          ? fmtGrowthPp(growthCvrPp(row.act, row.cmp))
+          : fmtGrowth(growthPct(row.act, row.cmp));
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.label}</td>
+          <td>${row.isPercent ? fmtPct(row.act) : fmt(row.act)}</td>
+          <td>${row.isPercent ? fmtPct(row.tgt) : fmt(row.tgt)}</td>
+          <td><span class="kpi-pct ${achCls}">${fmtPct(pct)}</span></td>
+          <td>${row.cmp ? (row.isPercent ? fmtPct(row.cmp) : fmt(row.cmp)) : "—"}</td>
+          <td><span class="kpi-gr ${g.cls}">${g.text}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function setTextCls(id, text, cls) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = "c" + (cls ? " " + cls : "");
+    }
+
+    function renderDetail() {
+      referenceDate = todayYmd();
+      if (isDataReady) dataAnchorDate = resolveDataAnchor(referenceDate);
+
+      if (!isDataReady || !sortedCurrentDays.length) {
+        setStatus(isDataReady
+          ? "유효한 올해값 데이터가 없습니다. 시트를 확인해 주세요."
+          : "데이터 로드 중이거나 실패했습니다.", true);
+        return;
+      }
+      const vm = buildViewModel();
+      const cmpLabel = detailCmp === "year" ? "전년" : "전주";
+      const [y, m] = referenceDate.split("-");
+      const todayNote = dataAnchorDate !== referenceDate
+        ? ` · 당일 실적은 ${fmtDotDate(dataAnchorDate)} 기준(오늘 미집계)`
+        : "";
+
+      let periodSub = "";
+      if (detailMode === "monthly") {
+        periodSub = `${y}년 ${Number(m)}월 누적 (1일~${fmtDotDate(referenceDate)}) · 기준일: 오늘 ${fmtDotDate(referenceDate)} · 결제합계${todayNote}`;
+      } else if (detailMode === "weekly") {
+        const { mon, sun } = getPrevWeekMonSun(referenceDate);
+        periodSub = `전주 (월–일) ${fmtDotDate(mon)} – ${fmtDotDate(sun)} · 기준일: 오늘 ${fmtDotDate(referenceDate)} · 결제합계`;
+      } else {
+        periodSub = `${fmtDotDate(vm.lastDay)} 스냅샷 · 기준일: 오늘 ${fmtDotDate(referenceDate)} · 결제합계`;
+      }
+      document.getElementById("detailPeriodSub").textContent = periodSub;
+      let cmpMeta = vm.compareHint;
+      if (detailMode !== "daily" && vm.cmpExpected > 0 && vm.cmpMatched < vm.cmpExpected) {
+        cmpMeta += ` · 비교일 매칭 ${vm.cmpMatched}/${vm.cmpExpected} (누락 ${vm.cmpExpected - vm.cmpMatched}일)`;
+      }
+      document.getElementById("kpiTableMeta").textContent = `구글 시트 연동 · ${periodSub} · 비교: ${cmpLabel}`;
+      document.getElementById("detailCmpHint").textContent = cmpMeta;
+      if (detailMode === "daily" && detailCmp === "year" && !vm.day.compareOk) {
+        console.warn("[대시보드] 전년 동요일 비교 실패", {
+          snapshot: vm.lastDay,
+          compareKey: vm.day.cmpKey,
+          issues: vm.day.compareIssues
+        });
+      }
+
+      const snap = document.getElementById("dailySnapshotRow");
+      snap.classList.toggle("show", detailMode === "daily");
+
+      const accSalesG = growthPct(vm.act.sales, vm.cmp.sales);
+      const daySalesG = growthPct(vm.day.cur?.sales, vm.day.cmp?.sales);
+      const accSalesAch = achPct(vm.act.sales, vm.tgt.sales);
+      const daySalesAch = achPct(vm.day.cur?.sales, vm.day.tgt?.sales);
+
+      document.getElementById("detailSalesAccK").textContent = detailMode === "weekly" ? "주간 매출 합계" : `총 매출 (${vm.accLabel})`;
+      document.getElementById("detailSalesDayK").textContent = detailMode === "daily" ? "당일 매출" : `총 매출 (${vm.dayLabel})`;
+      document.getElementById("detailSalesAccV").textContent = fmtMan(vm.act.sales);
+      document.getElementById("detailSalesDayV").textContent = fmtMan(vm.day.cur?.sales || 0);
+
+      const accG = fmtGrowth(accSalesG);
+      const dayG = fmtGrowth(daySalesG);
+      setTextCls("detailSalesAccC",
+        `${cmpLabel} 대비 ${accG.text} · ${cmpLabel} ${fmtMan(vm.cmp.sales)} · 목표 달성 ${fmtPct(accSalesAch)}`,
+        accG.cls);
+      setTextCls("detailSalesDayC",
+        `${cmpLabel} 동요일 대비 ${dayG.text} · ${cmpLabel} ${fmtMan(vm.day.cmp?.sales || 0)} · 목표 달성 ${fmtPct(daySalesAch)}`,
+        dayG.cls);
+
+      const uvAccAch = achPct(vm.act.uv, vm.tgt.uv);
+      const uvDayAch = achPct(vm.day.cur?.uv, vm.day.tgt?.uv);
+      document.getElementById("detailUvV").textContent =
+        detailMode === "daily"
+          ? fmt(vm.day.cur?.uv || 0) + "명"
+          : fmtUv(vm.act.uv) + " / " + fmt(vm.day.cur?.uv || 0);
+      document.getElementById("detailUvC").textContent =
+        `${vm.accLabel} 목표 ${fmtPct(uvAccAch)} · ${vm.dayLabel} 목표 ${fmtPct(uvDayAch)}`;
+      const uvG = fmtGrowth(growthPct(vm.act.uv, vm.cmp.uv));
+      document.getElementById("detailUvCmp").textContent =
+        `UV ${cmpLabel} 대비 ${uvG.text} · ${cmpLabel} ${fmt(vm.cmp.uv)}`;
+
+      const tgtCvr = vm.day.tgt?.cvr || vm.tgt.cvr || 4;
+      const cvAccAch = achPct(vm.act.cvr, vm.tgt.cvr || 4);
+      const cvDayAch = achPct(vm.day.cur?.cvr, tgtCvr);
+      document.getElementById("detailCvV").textContent =
+        detailMode === "daily"
+          ? fmtPct(vm.day.cur?.cvr || 0)
+          : fmtPct(vm.act.cvr) + " / " + fmtPct(vm.day.cur?.cvr || 0);
+      const cvHint = cvAccAch >= 100 && cvDayAch >= 100 ? "누적·당일 모두 목표 달성" : "누적·당일 모두 목표 미달";
+      document.getElementById("detailCvC").textContent = cvHint;
+      document.getElementById("detailCvC").className = "c " + (cvHint.includes("미달") ? "down" : "up");
+      const cvDiff = vm.day.cur && vm.day.cmp ? (vm.day.cur.cvr - vm.day.cmp.cvr) : null;
+      document.getElementById("detailCvCmp").textContent = cvDiff != null
+        ? `전환 ${cmpLabel} 동요일 ${cvDiff >= 0 ? "+" : ""}${(Math.round(cvDiff * 10) / 10)}%p · ${cmpLabel} ${fmtPct(vm.day.cmp?.cvr || 0)}`
+        : `전환 ${cmpLabel} 비교 데이터 없음`;
+
+      const aovAccAch = achPct(vm.act.aov, vm.tgt.aov || 55000);
+      const aovDayAch = achPct(vm.day.cur?.aov, vm.day.tgt?.aov || 55000);
+      document.getElementById("detailAovV").textContent =
+        detailMode === "daily"
+          ? fmt(vm.day.cur?.aov || 0) + "원"
+          : fmt(vm.act.aov) + "원 / " + fmt(vm.day.cur?.aov || 0) + "원";
+      const aovHint = aovAccAch >= 100 ? "누적·당일 목표 초과" : "누적·당일 목표 미달";
+      document.getElementById("detailAovC").textContent = aovHint;
+      document.getElementById("detailAovC").className = "c " + (aovHint.includes("초과") ? "up" : "down");
+      const aovG = fmtGrowth(growthPct(vm.act.aov, vm.cmp.aov));
+      document.getElementById("detailAovCmp").textContent =
+        `객단가 ${cmpLabel} 대비 ${aovG.text} · ${cmpLabel} ${fmt(vm.cmp.aov)}원`;
+
+      document.querySelectorAll(".chip[data-mode]").forEach(ch => {
+        ch.classList.toggle("active", ch.getAttribute("data-mode") === detailMode);
+      });
+      document.querySelectorAll(".cmp-btn[data-cmp]").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-cmp") === detailCmp);
+      });
+
+      renderKpiTable(vm);
+
+      const cmpNote = vm.cmp.matched < vm.rangeDays.length
+        ? ` · ${cmpLabel} 비교 가능일 ${vm.cmp.matched}/${vm.rangeDays.length}일`
+        : "";
+      const src = window.__lastDataSource ? ` · ${window.__lastDataSource}` : "";
+      setStatus(`데이터 반영 완료 · 기준일(오늘) ${fmtDotDate(referenceDate)} · 실적 반영일 ${fmtDotDate(dataAnchorDate)}${cmpNote}${src}`, false);
+    }
+
+    async function loadAll() {
+      isDataReady = false;
+      let source = "";
+
+      if (window.__DASHBOARD_FALLBACK__) {
+        try {
+          const fb = loadLocalFallback();
+          if (sortedCurrentDays.length) {
+            isDataReady = true;
+            window.__lastDataSource = fb;
+            bindControls();
+            renderDetail();
+            setStatus(fb + " · 구글 시트 연동 시도 중…", false);
+          }
+        } catch (_) { /* ignore */ }
+      } else {
+        setStatus("구글 시트 연동 중… (fetch → JSONP, 최대 15초/시트)", false);
+      }
+
+      try {
+        const [rt, rp, rc] = await Promise.allSettled([
+          fetchSheet(SHEETS.target),
+          fetchSheet(SHEETS.prevYear),
+          fetchSheet(SHEETS.current)
+        ]);
+
+        const fails = [rt, rp, rc].filter(x => x.status === "rejected");
+        if (fails.length === 3) {
+          const detail = fails.map((f, i) => ["목표값", "전년 비교", "올해값"][i] + ": " + (f.reason?.message || f.reason)).join(" · ");
+          throw new Error(detail || "시트 3개 모두 실패");
+        }
+
+        if (rt.status === "fulfilled") dataStore._target = rt.value;
+        if (rp.status === "fulfilled") dataStore._prev = rp.value;
+        if (rc.status === "fulfilled") dataStore._current = rc.value;
+
+        if (fails.length) {
+          const fb = loadLocalFallback();
+          if (!fb) throw new Error(fails.map(f => f.reason?.message).join(" / "));
+          const miss = [];
+          if (rt.status === "rejected") miss.push("목표값");
+          if (rp.status === "rejected") miss.push("전년");
+          if (rc.status === "rejected") miss.push("올해");
+          source = `구글 시트 부분 연동(${miss.join(",")} 실패 → 로컬)`;
+          const fbBundle = window.__DASHBOARD_FALLBACK__;
+          if (rt.status === "rejected" && fbBundle) dataStore._target = fbBundle.target;
+          if (rp.status === "rejected" && fbBundle) dataStore._prev = fbBundle.prev;
+          if (rc.status === "rejected" && fbBundle) dataStore._current = fbBundle.current;
+          buildMaps();
+        } else {
+          buildMaps();
+          source = "구글 시트 실시간 연동";
+        }
+
+        if (!sortedCurrentDays.length) throw new Error("올해값에 유효한 일별 데이터가 없습니다.");
+
+        isDataReady = true;
+        window.__lastDataSource = source;
+
+        const inp = document.getElementById("detailDailyDateInput");
+        inp.min = sortedCurrentDays[0];
+        inp.max = referenceDate;
+        if (!inp.value || inp.value > referenceDate) inp.value = referenceDate;
+
+        bindControls();
+        renderDetail();
+      } catch (e) {
+        const fb = loadLocalFallback();
+        if (fb && sortedCurrentDays.length) {
+          isDataReady = true;
+          window.__lastDataSource = fb;
+          bindControls();
+          renderDetail();
+          setStatus(`${fb} · 시트 연동 실패(${e.message})`, false);
+          return;
+        }
+        isDataReady = false;
+        setStatus(
+          `로드 실패: ${e.message}<br><span class="hint">① 시트가 <b>링크가 있는 모든 사용자</b>에게 공개(보기)인지 확인 ② 인터넷 연결 ③ 새로고침 버튼 재시도. file:// 에서도 JSONP로 연동되지만, 안 되면 폴더에서 <b>npx serve . -p 3000</b> 후 http://localhost:3000/commerce_dashboard_report_detail.html 로 열어 보세요.</span>`,
+          true
+        );
+        bindControls();
+      }
+    }
+
+    function setStatus(html, isErr) {
+      const status = document.getElementById("loadStatus");
+      status.classList.toggle("err", !!isErr);
+      status.innerHTML = html + ' <button type="button" class="btn-refresh" id="btnRefresh">새로고침</button>';
+      document.getElementById("btnRefresh").onclick = loadAll;
+    }
+
+    function bindControls() {
+      document.querySelectorAll(".chip[data-mode]").forEach(btn => {
+        btn.onclick = () => {
+          detailMode = btn.getAttribute("data-mode");
+          if (detailMode === "daily") {
+            const inp = document.getElementById("detailDailyDateInput");
+            if (!inp.value) inp.value = referenceDate || todayYmd();
+          }
+          renderDetail();
+        };
+      });
+      document.querySelectorAll(".cmp-btn[data-cmp]").forEach(btn => {
+        btn.onclick = () => {
+          detailCmp = btn.getAttribute("data-cmp");
+          renderDetail();
+        };
+      });
+      const refreshBtn = document.getElementById("btnRefresh");
+      if (refreshBtn) refreshBtn.onclick = loadAll;
+      const dateInp = document.getElementById("detailDailyDateInput");
+      dateInp.onchange = renderDetail;
+    }
+
+    bindControls();
+    loadAll();
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+_test_*
+*.tmp
+
+# 시트 다운로드 원본 (로컬 빌드용, 저장소에는 백업 JS만 포함)
+named*.csv
+sheet*.csv
+*_now.csv
+dashboard_data.json

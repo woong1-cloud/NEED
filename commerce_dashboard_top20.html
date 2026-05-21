@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>커머스 성과 대시보드</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;--card:#ffffff;--ink:#0f172a;--sub:#64748b;--line:#e2e8f0;
+      --blue:#2563eb;--green:#16a34a;--amber:#d97706;--red:#dc2626;--violet:#7c3aed;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Noto Sans KR",sans-serif}
+    .wrap{max-width:1400px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+    .tabs{display:flex;gap:8px;background:#e8edf5;padding:6px;border-radius:12px;width:max-content}
+    .tab-btn{border:none;background:transparent;color:#334155;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer}
+    .tab-btn.active{background:#0f172a;color:#fff}
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+    .grid{display:grid;gap:12px}
+    .kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .row-2{grid-template-columns:1.4fr 1fr}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .header{background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:16px;padding:20px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .header h1{margin:0 0 8px;font-size:24px}
+    .meta{font-size:13px;color:#cbd5e1}
+    .pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:8px 12px;font-size:12px}
+    .kpi .label{font-size:12px;color:var(--sub)}
+    .kpi-dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+    .kpi-cell{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .kpi-cell .k{font-size:11px;color:var(--sub);margin-bottom:3px}
+    .kpi-cell .v{font-size:20px;font-weight:700;line-height:1.2}
+    .kpi .delta{font-size:12px;font-weight:600}
+    .up{color:var(--green)} .down{color:var(--red)} .warn{color:var(--amber)}
+    h2{margin:0 0 10px;font-size:16px}
+    .hint{color:var(--sub);font-size:12px}
+    .bars{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .bar-row{display:grid;grid-template-columns:90px 1fr 56px;align-items:center;gap:8px}
+    .bar-bg{height:12px;background:#e8edf5;border-radius:999px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:999px}
+    .funnel-step{margin:8px 0;display:grid;grid-template-columns:120px 1fr 80px;gap:8px;align-items:center;font-size:13px}
+    .funnel-box{height:24px;border-radius:8px;background:#eef2ff;overflow:hidden}
+    .funnel-bar{height:100%;background:linear-gradient(90deg,#60a5fa,#2563eb);display:flex;align-items:center;padding-left:8px;color:#fff;font-size:12px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:980px;font-size:13px}
+    th,td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:right;white-space:nowrap}
+    th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+    thead th{position:sticky;top:0;background:#f8fafc;z-index:1;color:#334155;font-weight:600}
+    .rank{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:var(--blue);font-size:12px}
+    .mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .mini .val{font-size:20px;font-weight:700;margin:6px 0}
+
+    .kpi-core-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+    .kpi-core-h{margin:0 0 4px;font-size:15px;font-weight:700;color:var(--ink)}
+    .kpi-core-meta{margin:0 0 10px;font-size:12px;color:var(--sub);line-height:1.45}
+    .kpi-core-table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+    .kpi-core-table th,.kpi-core-table td{border:1px solid var(--line);padding:10px 12px;text-align:right;vertical-align:middle}
+    .kpi-core-table th:first-child,.kpi-core-table td:first-child{text-align:left;font-weight:600}
+    .kpi-core-table thead th{background:#f1f5f9;color:#334155;font-weight:600;border-bottom:1px solid var(--line)}
+    .kpi-core-table tbody tr:nth-child(even){background:#fafbfc}
+    .kpi-core-table tbody tr:hover{background:#f8fafc}
+    .kpi-pct{display:inline-block;min-width:3.2em;font-weight:700;padding:2px 8px;border-radius:6px;font-size:12px}
+    .kpi-pct.ok{background:#ecfdf3;color:#166534}
+    .kpi-pct.bad{background:#fef2f2;color:#b91c1c}
+    .kpi-gr{font-weight:600}
+    .kpi-gr.up{color:var(--green)}
+    .kpi-gr.down{color:var(--red)}
+
+    .detail-shell{background:transparent;border-radius:0;padding:0;color:var(--ink);border:none}
+    .detail-shell > .kpi-core-card{margin-top:12px}
+    .detail-header{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .detail-title{font-size:18px;font-weight:700;color:var(--ink)}
+    .detail-sub{font-size:12px;color:var(--sub);margin-top:4px}
+    .detail-toolbar{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+    .detail-controls{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .chip{font-size:12px;background:#f1f5f9;border:1px solid var(--line);color:#475569;padding:7px 12px;border-radius:999px;cursor:pointer;font-weight:600}
+    .chip:hover{background:#e2e8f0}
+    .chip.active{background:var(--violet);border-color:var(--violet);color:#fff}
+    .cmp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+    .cmp-btns{display:flex;gap:4px}
+    .cmp-btn{font-size:11px;background:#fff;border:1px solid var(--line);color:#64748b;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+    .cmp-btn.active{background:#eef2ff;border-color:#c7d2fe;color:#4338ca}
+    .dsec{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .dsec-title{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--ink)}
+    .dgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .dgrid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .dgrid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .dk{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}
+    .dk .k{font-size:12px;color:var(--sub)}
+    .dk .v{font-size:24px;font-weight:700;margin:4px 0;color:var(--ink)}
+    .dk .c{font-size:12px;line-height:1.45}
+    .dcard{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}
+    .dcard .k{font-size:12px;color:var(--sub)}
+    .dcard .v{font-size:22px;font-weight:700;margin:4px 0;color:var(--ink)}
+    .dcard .c{font-size:12px;line-height:1.45}
+    .dbars .r{display:grid;grid-template-columns:80px 1fr 50px;gap:8px;align-items:center;margin:8px 0;font-size:12px;color:var(--ink)}
+    .dbars .bg{height:8px;background:#e8edf5;border-radius:999px;overflow:hidden}
+    .dbars .f{height:100%;background:var(--violet);border-radius:999px}
+    .dbars .f2{height:100%;background:var(--green);border-radius:999px}
+    .dbars .f3{height:100%;background:var(--amber);border-radius:999px}
+    .dbars .f4{height:100%;background:var(--red);border-radius:999px}
+    .dtbl thead th{background:#f8fafc;color:#334155}
+    .dtbl th,.dtbl td{border-bottom:1px solid var(--line);color:var(--ink)}
+
+    .snapshot-row{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--sub)}
+    .snapshot-row.show{display:flex}
+    .snapshot-row label{font-weight:600;color:var(--ink)}
+    .snapshot-row input[type="date"]{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+
+    .dsec-title-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .dsec-dot{width:8px;height:8px;border-radius:2px;background:#db2777;flex-shrink:0}
+    .post-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .svc-card-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+    .svc-card-title{font-size:14px;font-weight:700}
+    .svc-card-sub{font-size:12px;color:var(--sub);margin-top:4px}
+    .svc-note{font-size:11px;color:var(--sub);white-space:nowrap}
+    .svc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+    .svc-col{padding:14px;border-right:1px solid var(--line)}
+    .svc-col:last-child{border-right:none}
+    .svc-lbl{font-size:12px;font-weight:600;color:var(--ink)}
+    .svc-std{font-size:11px;color:var(--sub);margin-top:2px;margin-bottom:8px}
+    .svc-main{font-size:22px;font-weight:700;color:var(--ink);line-height:1.2}
+    .svc-unit{font-size:13px;font-weight:600;color:var(--sub)}
+    .svc-goal{font-size:12px;margin-top:6px}
+    .svc-goal.bad{color:var(--red)}
+    .svc-goal.ok{color:var(--green)}
+    .svc-bar-wrap{height:6px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:6px}
+    .svc-bar-fill{height:100%;border-radius:999px}
+    .svc-bar-fill.warn{background:var(--red)}
+    .svc-bar-fill.ok{background:var(--blue)}
+    .svc-div{height:1px;background:var(--line);margin:10px 0}
+    .svc-day-lbl{font-size:11px;color:var(--amber);font-weight:600;margin-bottom:2px}
+    .svc-day-val{font-size:15px;font-weight:700;color:var(--ink)}
+    .svc-day-meta{font-size:11px;margin-top:2px}
+    .svc-day-meta.bad{color:var(--red)}
+    .svc-cum{font-size:11px;color:var(--sub);margin-top:8px}
+    .svc-coupon{background:#f8fafc;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:11px}
+    .svc-coupon-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}
+    .svc-coupon-row:last-child{margin-bottom:0}
+
+    .product-dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .pd-block{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+    .pd-head{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;line-height:1.4}
+    .pd-head .hint{font-weight:400}
+    .pd-sub{font-size:11px;color:var(--sub);margin-bottom:10px}
+    .pd-table{width:100%;border-collapse:collapse;font-size:12px;min-width:0}
+    .pd-table th,.pd-table td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:right;vertical-align:middle}
+    .pd-table th:first-child,.pd-table td:first-child{width:34px;text-align:center;color:var(--sub);font-weight:600}
+    .pd-table th:nth-child(2),.pd-table td:nth-child(2){text-align:left;word-break:break-all}
+    .pd-table thead th{background:#fff;color:#475569;font-weight:600;font-size:11px}
+    .pd-table tbody tr:last-child td{border-bottom:none}
+    .pd-eff{color:var(--violet);font-weight:600}
+
+    .mini-trend{margin-top:10px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .trend-svg{width:100%;height:150px;display:block}
+    .trend-legend{display:flex;gap:14px;align-items:center;justify-content:flex-end;font-size:11px;color:var(--sub);margin-top:4px}
+    .trend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+
+    .donut-wrap{display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start;min-width:0}
+    .donut{
+      width:200px;height:200px;border-radius:50%;
+      background:#e8edf5;position:relative;flex-shrink:0;
+      border:2px solid #dbeafe;
+    }
+    .donut::after{
+      content:"";position:absolute;inset:24px;background:#fff;border-radius:50%;
+      border:1px solid var(--line);
+    }
+    .donut-center{
+      position:absolute;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;z-index:1;text-align:center;
+    }
+    .donut-center .lbl{font-size:12px;color:var(--sub)}
+    .donut-center .val{font-size:32px;font-weight:700;line-height:1}
+    .mix-legend{display:flex;flex-direction:column;gap:8px;font-size:12px;min-width:0}
+    .legend-item{display:flex;align-items:center;gap:8px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .mix-note{font-size:12px;color:var(--sub)}
+    .mix-metric{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+    .mix-metric h4{margin:0 0 8px;font-size:13px}
+    .mix-top3{display:flex;flex-direction:column;gap:8px}
+    .mix-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:10px}
+    .mix-item .name{font-weight:700;min-width:86px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mix-item .meta{display:flex;gap:10px;align-items:baseline;margin-left:auto;font-size:12px;color:var(--sub)}
+    .mix-item .meta b{color:var(--ink);font-weight:700}
+    .mix-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+    .mix-badge.up{background:#ecfdf3;color:#166534}
+    .mix-badge.down{background:#fef2f2;color:#b91c1c}
+    .mix-alert{margin-top:10px;padding:10px;background:#fff;border:1px dashed var(--line);border-radius:10px;font-size:12px}
+    .mix-alert .t{font-weight:700;margin-bottom:6px}
+    .mix-alert ul{margin:0;padding-left:16px;line-height:1.6;color:var(--sub)}
+
+    @media (max-width:1100px){.kpi-grid,.row-2,.mini,.dgrid4,.dgrid3,.dgrid2,.post-grid{grid-template-columns:1fr 1fr}.svc-grid{grid-template-columns:1fr}.product-dash-grid{grid-template-columns:1fr}.donut-wrap{grid-template-columns:180px 1fr}}
+    @media (max-width:760px){.kpi-grid,.row-2,.mini,.dgrid4,.dgrid3,.dgrid2,.post-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="summary">요약판</button>
+      <button class="tab-btn" data-tab="detail">상세판</button>
+    </div>
+
+    <section class="tab-pane active" id="summary">
+      <section class="header">
+        <div>
+          <h1>커머스 성과 대시보드</h1>
+          <div class="meta">2025년 4월 누적 데이터 분석 · 기준: 주문/UV · 마지막 업데이트 09:00</div>
+        </div>
+        <div class="pill">핵심 알림: 전환율/반품율 개선 필요, 객단가는 목표 초과</div>
+      </section>
+
+      <div class="grid kpi-grid" style="margin-top:12px;">
+        <article class="card kpi">
+          <div class="label">총 매출</div>
+          <div class="kpi-dual">
+            <div class="kpi-cell"><div class="k">누적</div><div class="v">2,602만원</div><div class="delta up">전년 동요일 +34%</div></div>
+            <div class="kpi-cell"><div class="k">당일</div><div class="v">7,051만원</div><div class="delta down">전년 동요일 -10%</div></div>
+          </div>
+          <div class="hint">목표 달성률: 누적 65% / 당일 35%</div>
+        </article>
+        <article class="card kpi">
+          <div class="label">유입 (UV)</div>
+          <div class="kpi-dual">
+            <div class="kpi-cell"><div class="k">누적</div><div class="v">151.8만명</div><div class="delta up">전년 동요일 +56%</div></div>
+            <div class="kpi-cell"><div class="k">당일</div><div class="v">50,440명</div><div class="delta up">전년 동요일 +44%</div></div>
+          </div>
+          <div class="hint">목표 달성률: 누적 89% / 당일 55%</div>
+        </article>
+        <article class="card kpi">
+          <div class="label">전환율</div>
+          <div class="kpi-dual">
+            <div class="kpi-cell"><div class="k">누적</div><div class="v">2.7%</div><div class="delta down">전년 동요일 -0.8%p</div></div>
+            <div class="kpi-cell"><div class="k">당일</div><div class="v">2.3%</div><div class="delta down">전주 동요일 -0.3%p</div></div>
+          </div>
+          <div class="hint">목표 4.0% 대비: 누적 67% / 당일 57%</div>
+        </article>
+        <article class="card kpi">
+          <div class="label">반품율</div>
+          <div class="kpi-dual">
+            <div class="kpi-cell"><div class="k">누적</div><div class="v">11.0%</div><div class="delta warn">전년 동요일 -1.2%p</div></div>
+            <div class="kpi-cell"><div class="k">당일</div><div class="v">15.0%</div><div class="delta warn">전년 동요일 +2.8%p</div></div>
+          </div>
+          <div class="hint">목표 10% 기준: 누적/당일 모두 초과</div>
+        </article>
+      </div>
+
+      <div class="grid row-2" style="margin-top:12px;">
+        <article class="card">
+          <h2>주간 매출 실적 (최근 7일 추이)</h2><div class="hint">최근 7일 매출 흐름으로 변화를 빠르게 확인</div>
+          <div class="mini-trend">
+            <svg id="summaryRev7Svg" class="trend-svg" viewBox="0 0 520 150" preserveAspectRatio="none"></svg>
+            <div class="trend-legend">
+              <span style="display:inline-flex;align-items:center;gap:6px;">
+                <span style="width:18px;height:0;border-top:2px solid #16a34a;display:inline-block;"></span>
+                매출(선)
+              </span>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <h2>목표 대비 달성률</h2>
+          <div class="bars">
+            <div class="bar-row"><span>매출</span><div class="bar-bg"><div class="bar-fill" style="width:65%;background:var(--blue)"></div></div><b>65%</b></div>
+            <div class="bar-row"><span>UV</span><div class="bar-bg"><div class="bar-fill" style="width:89%;background:var(--green)"></div></div><b>89%</b></div>
+            <div class="bar-row"><span>전환율</span><div class="bar-bg"><div class="bar-fill" style="width:67%;background:var(--red)"></div></div><b>67%</b></div>
+            <div class="bar-row"><span>객단가</span><div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--violet)"></div></div><b>110%</b></div>
+          </div>
+        </article>
+      </div>
+
+      <section class="card" style="margin-top:12px;">
+        <h2>상품 판매 데이터 요약 Top 20</h2>
+        <div class="hint">매출 기준 내림차순</div>
+        <div class="table-wrap" style="margin-top:12px;"><table><thead><tr><th>순위</th><th>상품명</th><th>카테고리</th><th>매출(원)</th><th>판매수량</th><th>주문건수</th><th>객단가(원)</th><th>매출 기여도</th></tr></thead><tbody id="top20BodySummary"></tbody></table></div>
+      </section>
+    </section>
+
+    <section class="tab-pane" id="detail">
+      <div class="detail-shell">
+        <div class="detail-header">
+          <div>
+            <div class="detail-title">커머스 지표 대시보드 (상세판)</div>
+            <div class="detail-sub" id="detailPeriodSub">2025년 4월 누적 · 기준: 주문 · 마지막 업데이트 09:00</div>
+          </div>
+          <div class="detail-toolbar">
+            <div class="detail-controls">
+              <button type="button" class="chip active" data-mode="monthly">월 누적</button>
+              <button type="button" class="chip" data-mode="weekly">주간</button>
+              <button type="button" class="chip" data-mode="daily">일별 조회</button>
+            </div>
+            <div class="cmp-row">
+              <span>비교 기준</span>
+              <div class="cmp-btns">
+                <button type="button" class="cmp-btn active" data-cmp="year">전년</button>
+                <button type="button" class="cmp-btn" data-cmp="week">전주</button>
+              </div>
+              <span class="hint" id="detailCmpHint">매출 비교: 전년 동기 / 당일: 전년 동요일</span>
+            </div>
+            <div id="dailySnapshotRow" class="snapshot-row">
+              <label for="detailDailyDateInput">스냅샷 기준일</label>
+              <input type="date" id="detailDailyDateInput" value="2025-04-27" max="2099-12-31" />
+              <span class="hint">선택한 일자 기준 당일·전일 지표를 표시합니다.</span>
+            </div>
+          </div>
+        </div>
+
+        <section class="kpi-core-card" aria-labelledby="kpi-core-heading">
+          <h2 class="kpi-core-h" id="kpi-core-heading">핵심 지표</h2>
+          <p class="kpi-core-meta" id="kpiTableMeta">상세판 · 기준 구간</p>
+          <div class="table-wrap">
+            <table class="kpi-core-table">
+              <thead>
+                <tr>
+                  <th>핵심지표</th>
+                  <th>실적</th>
+                  <th>목표</th>
+                  <th>달성률</th>
+                  <th id="kpiFilterColHead">전년 실적</th>
+                  <th id="kpiGrowthColHead">성장률</th>
+                </tr>
+              </thead>
+              <tbody id="kpiTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="dsec">
+          <div class="dsec-title">매출 / UV</div>
+          <div class="dgrid2">
+            <div class="dk">
+              <div class="k" id="detailSalesAccK">총 매출 (누적)</div>
+              <div class="v" id="detailSalesAccV">2,602만원</div>
+              <div class="c" id="detailSalesAccC">전년 동기 대비 +34% · 전년 1,937만 · 목표 달성 65%</div>
+            </div>
+            <div class="dk">
+              <div class="k" id="detailSalesDayK">총 매출 (당일)</div>
+              <div class="v" id="detailSalesDayV">7,051만원</div>
+              <div class="c" id="detailSalesDayC">전년 동요일 대비 -10% · 전년 7,858만 · 목표 달성 35%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">핵심 지표 - 유입 / 전환 / 객단가</div>
+          <div class="dgrid3">
+            <div class="dcard">
+              <div class="k">유입 (UV)</div>
+              <div class="v" id="detailUvV">151.8만 / 50,440</div>
+              <div class="c" id="detailUvC">누적 목표 89% · 당일 목표 55%</div>
+              <div class="c hint" id="detailUvCmp" style="margin-top:4px;"></div>
+            </div>
+            <div class="dcard">
+              <div class="k">전환율</div>
+              <div class="v" id="detailCvV">2.7% / 2.3%</div>
+              <div class="c down" id="detailCvC">누적·당일 모두 목표 미달</div>
+              <div class="c hint" id="detailCvCmp" style="margin-top:4px;"></div>
+            </div>
+            <div class="dcard">
+              <div class="k">객단가</div>
+              <div class="v" id="detailAovV">63,831원 / 59,608원</div>
+              <div class="c up" id="detailAovC">누적·당일 목표 초과</div>
+              <div class="c hint" id="detailAovCmp" style="margin-top:4px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">유입 상세 - 신규/재방문/앱유입/MAU</div>
+          <div class="dgrid4">
+            <div class="dcard"><div class="k">신규 방문</div><div class="v" id="detailNewV">87.6만</div><div class="c" id="detailNewC">당일 29,100명</div></div>
+            <div class="dcard"><div class="k">재방문</div><div class="v" id="detailRetV">64.2만</div><div class="c" id="detailRetC">당일 21,340명</div></div>
+            <div class="dcard"><div class="k">앱 유입 비중</div><div class="v" id="detailAppV">38%</div><div class="c up" id="detailAppC">당일 41% (+3%p)</div></div>
+            <div class="dcard"><div class="k" id="detailMauK">MAU</div><div class="v" id="detailMauV">189,352명</div><div class="c up" id="detailMauC">당일 MAU 177,458명</div></div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">외부 유입채널 비중</div>
+          <div class="dgrid2">
+            <div class="dcard" style="min-width:0;">
+              <div class="k" style="font-weight:700;color:var(--ink);margin-bottom:8px;">채널 비중(도넛)</div>
+              <div class="donut-wrap">
+                <div id="externalChannelDonut" class="donut">
+                  <div class="donut-center">
+                    <div class="lbl" id="extChMainLabel">채널 없음</div>
+                    <div class="val" id="extChMainPct">66.1%</div>
+                  </div>
+                </div>
+                <div class="mix-legend" id="externalChannelLegend"></div>
+              </div>
+              <div class="mix-note" style="margin-top:10px;">매출이 높은 상위 8개 유입채널의 비중만 표시합니다.</div>
+            </div>
+            <div class="dcard" style="min-width:0;">
+              <div class="k" style="font-weight:700;color:var(--ink);margin-bottom:8px;">채널 기여도 요약 (Top 3)</div>
+              <div class="mix-metric">
+                <div class="mix-top3" id="externalChannelTop3"></div>
+                <div class="mix-alert">
+                  <div class="t">급변 채널 알림</div>
+                  <ul id="externalChannelAlerts"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">전환 상세 - 장바구니/이탈/퍼널</div>
+          <div class="dgrid2">
+            <div class="dcard">
+              <div class="k" id="detailFunnelLeftTitle">누적 퍼널</div>
+              <div class="dbars" id="detailFunnelAcc">
+                <div class="r"><span>방문</span><div class="bg"><div class="f" id="fAcc1" style="width:100%"></div></div><b id="fAcc1p">100%</b></div>
+                <div class="r"><span>조회</span><div class="bg"><div class="f" id="fAcc2" style="width:72%"></div></div><b id="fAcc2p">72%</b></div>
+                <div class="r"><span>장바구니</span><div class="bg"><div class="f" id="fAcc3" style="width:12%"></div></div><b id="fAcc3p">12%</b></div>
+                <div class="r"><span>결제</span><div class="bg"><div class="f" id="fAcc4" style="width:3%"></div></div><b id="fAcc4p">2.7%</b></div>
+              </div>
+            </div>
+            <div class="dcard">
+              <div class="k" id="detailFunnelRightTitle">당일 퍼널</div>
+              <div class="dbars" id="detailFunnelDay">
+                <div class="r"><span>방문</span><div class="bg"><div class="f2" id="fDay1" style="width:100%"></div></div><b id="fDay1p">100%</b></div>
+                <div class="r"><span>조회</span><div class="bg"><div class="f2" id="fDay2" style="width:68%"></div></div><b id="fDay2p">68%</b></div>
+                <div class="r"><span>장바구니</span><div class="bg"><div class="f3" id="fDay3" style="width:11%"></div></div><b id="fDay3p">10.8%</b></div>
+                <div class="r"><span>결제</span><div class="bg"><div class="f4" id="fDay4" style="width:2.3%"></div></div><b id="fDay4p">2.3%</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">구매 후 현황</div>
+          <div class="post-grid">
+            <div class="dcard"><div class="k">반품율</div><div class="v" id="detailRrV">11% / 15%</div><div class="c down" id="detailRrC">목표 10% 초과</div></div>
+            <div class="dcard"><div class="k">재구매율</div><div class="v" id="detailRpV">24% / 21%</div><div class="c" id="detailRpC">누적 +2%p</div></div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title-row">
+            <span class="dsec-dot" aria-hidden="true"></span>
+            <div>
+              <div class="dsec-title" style="margin-bottom:0">서비스 현황</div>
+              <div class="hint" style="margin-top:2px">앱 다운로드 / 신규 가입자 / 쿠폰 사용 금액</div>
+            </div>
+          </div>
+          <div class="svc-card-hd">
+            <div></div>
+            <span class="svc-note">앱 · 마케팅 기준</span>
+          </div>
+          <div class="svc-grid">
+            <div class="svc-col">
+              <div class="svc-lbl">앱 다운로드</div>
+              <div class="svc-std">앱 다운로드 수</div>
+              <div><span class="svc-main" id="svcDlMain">33,571</span><span class="svc-unit" id="svcDlUnit">건</span></div>
+              <div class="svc-goal bad" id="svcDlGoal">목표 51,443 · 65%</div>
+              <div class="svc-bar-wrap"><div class="svc-bar-fill warn" id="svcDlBar" style="width:65%"></div></div>
+              <div class="svc-div"></div>
+              <div class="svc-day-lbl" id="svcDlDayLbl">당일</div>
+              <div class="svc-day-val" id="svcDlDayVal">1,176건</div>
+              <div class="svc-day-meta bad" id="svcDlDayMeta">목표 2,727 · 43% · 미달</div>
+              <div class="svc-cum" id="svcDlCum">총 누적 2,756,230건</div>
+            </div>
+            <div class="svc-col">
+              <div class="svc-lbl">신규 가입자</div>
+              <div class="svc-std">앱 기준</div>
+              <div><span class="svc-main" id="svcJoinMain">63,407</span><span class="svc-unit" id="svcJoinUnit">명</span></div>
+              <div class="svc-goal bad" id="svcJoinGoal">목표 85,739 · 74%</div>
+              <div class="svc-bar-wrap"><div class="svc-bar-fill warn" id="svcJoinBar" style="width:74%"></div></div>
+              <div class="svc-div"></div>
+              <div class="svc-day-lbl" id="svcJoinDayLbl">당일</div>
+              <div class="svc-day-val" id="svcJoinDayVal">1,130명</div>
+              <div class="svc-day-meta bad" id="svcJoinDayMeta">목표 4,545 · 25% · 미달</div>
+              <div class="svc-cum" id="svcJoinCum">총 누적 3,108,379명</div>
+            </div>
+            <div class="svc-col">
+              <div class="svc-lbl">쿠폰 사용 금액</div>
+              <div class="svc-std">서비스 기준 · 할인 적용액</div>
+              <div><span class="svc-main" id="svcCpMain">482</span><span class="svc-unit" id="svcCpUnit">만원</span></div>
+              <div class="svc-goal ok" id="svcCpGoal">서비스 기준 · 정상</div>
+              <div class="svc-bar-wrap"><div class="svc-bar-fill ok" id="svcCpBar" style="width:60%"></div></div>
+              <div class="svc-coupon">
+                <div class="svc-coupon-row"><span class="hint">쿠폰 사용 건수</span><strong id="svcCpCnt">3,240건</strong></div>
+                <div class="svc-coupon-row"><span class="hint">건당 평균 할인액</span><strong id="svcCpAvg">14,877원</strong></div>
+                <div class="svc-coupon-row"><span class="hint" id="svcCpDayLbl">당일 사용 금액</span><strong id="svcCpDayAmt">38만원</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">상품 대시보드</div>
+          <div class="hint" style="margin-bottom:10px">상세판 · 랜딩·카테고리 효율 요약 (매출 기준)</div>
+          <div class="product-dash-grid">
+            <div class="pd-block">
+              <div class="pd-head">1) 효율좋은 페이지 TOP 5 <span class="hint">(매출 기준)</span></div>
+              <div class="pd-sub">UV 대비 매출 효율(매출÷UV) 상위 랜딩</div>
+              <div class="table-wrap">
+                <table class="pd-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>페이지(URL)</th>
+                      <th>UV</th>
+                      <th>매출(원)</th>
+                      <th>매출/UV</th>
+                    </tr>
+                  </thead>
+                  <tbody id="top5PagesBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="pd-block">
+              <div class="pd-head">2) 효율좋은 카테고리 TOP 5 <span class="hint">(매출 기준 · 경로 기준)</span></div>
+              <div class="pd-sub">카테고리 트리 경로별 매출·주문 대비 효율(매출÷주문)</div>
+              <div class="table-wrap">
+                <table class="pd-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>카테고리 경로</th>
+                      <th>주문</th>
+                      <th>매출(원)</th>
+                      <th>매출/주문</th>
+                    </tr>
+                  </thead>
+                  <tbody id="top5CatsBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dsec">
+          <div class="dsec-title">상품 판매 TOP 20 (상세판 하단)</div>
+          <div class="table-wrap">
+            <table class="dtbl">
+              <thead><tr><th>순위</th><th>상품명</th><th>카테고리</th><th>매출(원)</th><th>판매수량</th><th>주문건수</th><th>객단가(원)</th><th>반품율</th><th>매출 기여도</th></tr></thead>
+              <tbody id="top20BodyDetail"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const top20 = [
+      ["프리미엄 구스다운 패딩","아우터",128000000,1320,1180,108475,6.2,4.9],["데일리 코튼 셔츠 3팩","상의",113500000,3870,3412,33265,3.8,4.4],
+      ["시그니처 와이드 슬랙스","하의",104900000,2940,2687,39040,4.5,4.0],["러닝 경량 스니커즈","신발",99600000,2288,2034,48968,5.6,3.8],
+      ["울 블렌드 롱코트","아우터",95200000,810,742,128301,7.1,3.6],["베이직 니트 가디건","상의",88500000,2410,2130,41549,4.2,3.4],
+      ["모이스처 스킨케어 세트","뷰티",86200000,1970,1790,48156,5.1,3.3],["노이즈캔슬링 이어버드","디지털",83800000,920,845,99171,2.9,3.2],
+      ["멀티포켓 백팩","잡화",80400000,1752,1601,50219,3.5,3.1],["프리미엄 타월 10장 세트","리빙",78200000,3250,3018,25911,2.1,3.0],
+      ["에어핏 레깅스","스포츠",76400000,2620,2411,31688,4.8,2.9],["테이블웨어 4인 세트","리빙",74100000,1180,1079,68675,3.4,2.8],
+      ["콜드브루 원두 패키지","식품",72600000,4920,4613,15739,1.8,2.7],["아로마 디퓨저 선물팩","리빙",70300000,1665,1534,45828,2.6,2.6],
+      ["키즈 데일리 상하복","키즈",68900000,2140,1998,34484,3.9,2.5],["여행용 캐리어 24인치","잡화",67500000,740,698,96705,4.7,2.4],
+      ["프리미엄 단백질 쉐이크","식품",66200000,2810,2631,25162,2.0,2.3],["오피스 인체공학 의자","리빙",65100000,410,387,168217,6.4,2.2],
+      ["실크터치 침구 풀세트","리빙",63800000,560,521,122456,5.8,2.1],["모던 미니 크로스백","잡화",62400000,1370,1284,48629,3.7,2.0]
+    ];
+    const fmt = n => n.toLocaleString("ko-KR");
+
+    function renderTop20(targetId, includeReturnRate){
+      const tbody = document.getElementById(targetId);
+      top20.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = includeReturnRate
+          ? `<td><span class="rank">${i + 1}</span></td><td><strong>${row[0]}</strong></td><td>${row[1]}</td>
+             <td>${fmt(row[2])}</td><td>${fmt(row[3])}</td><td>${fmt(row[4])}</td><td>${fmt(row[5])}</td>
+             <td style="color:${row[6] >= 5 ? "#dc2626" : "#64748b"}">${row[6]}%</td><td>${row[7]}%</td>`
+          : `<td><span class="rank">${i + 1}</span></td><td><strong>${row[0]}</strong></td><td>${row[1]}</td>
+             <td>${fmt(row[2])}</td><td>${fmt(row[3])}</td><td>${fmt(row[4])}</td><td>${fmt(row[5])}</td>
+             <td>${row[7]}%</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /** 상세판: 기간별 지표 · 비교 문구는 전년(y) / 전주(w) 중 선택 */
+    const DETAIL = {
+      monthly: {
+        periodSub: "2025년 4월 누적 · 기준: 주문 · 마지막 업데이트 09:00",
+        cmpHintYear: "매출 비교: 누적 전년 동기 · 당일 전년 동요일",
+        cmpHintWeek: "매출 비교: 누적 전주 · 당일 전주 동요일",
+        salesAccK: "총 매출 (누적)", salesDayK: "총 매출 (당일)",
+        salesAccV: "2,602만원", salesDayV: "7,051만원",
+        salesAccGoal: 65, salesDayGoal: 35,
+        salesAcc: { y: "전년 동요일 대비 +34% · 전년 1,937만", w: "전주 대비 +24% · 전주 2,100만" },
+        salesDay: { y: "전년 동요일 대비 -10% · 전년 7,858만", w: "전주 동요일 대비 -10% · 전주 7,834만" },
+        uv: { v: "151.8만 / 50,440", c: "누적 목표 89% · 당일 목표 55%", y: "UV 전년 동요일 +56% · 전년 97.6만", w: "UV 전주 +8% · 전주 140.5만" },
+        cv: { v: "2.7% / 2.3%", c: "누적·당일 모두 목표 미달", y: "전환 전년 동요일 -0.8%p · 전년 3.5%", w: "전환 전주 -0.4%p · 전주 3.1%" },
+        aov: { v: "63,831원 / 59,608원", c: "누적·당일 목표 초과", y: "객단가 전년 동요일 +15% · 55,441원", w: "객단가 전주 +3.1% · 61,910원" },
+        newV: "87.6만", newC: "당일 29,100명",
+        retV: "64.2만", retC: "당일 21,340명",
+        appV: "38%", appC: "당일 41% (+3%p)",
+        mauK: "MAU", mauV: "189,352명", mauC: "당일 MAU 177,458명",
+        funnelLeftTitle: "누적 퍼널", funnelRightTitle: "당일 퍼널",
+        funnelAcc: [100, 72, 12, 2.7], funnelDay: [100, 68, 10.8, 2.3],
+        rrV: "11% / 15%", rrC: "목표 10% 초과",
+        rpV: "24% / 21%", rpC: "누적 +2%p",
+        service: {
+          dl: { main: 33571, unit: "건", goal: 51443, pct: 65, dayLbl: "당일", day: 1176, dayUnit: "건", dgoal: 2727, dpct: 43, cum: 2756230 },
+          join: { main: 63407, unit: "명", goal: 85739, pct: 74, dayLbl: "당일", day: 1130, dayUnit: "명", dgoal: 4545, dpct: 25, cum: 3108379 },
+          coupon: { main: 482, unit: "만원", barPct: 60, status: "서비스 기준 · 정상", cnt: 3240, avg: 14877, dayLbl: "당일 사용 금액", dayAmt: "38만원" }
+        },
+        kpiTable: [
+          { label: "누적매출", act: 26020000, tgt: 39900000, cmpY: 19370000, cmpW: 21000000, isPercent: false },
+          { label: "당일매출", act: 70510000, tgt: 200000000, cmpY: 78580000, cmpW: 78340000, isPercent: false },
+          { label: "유입(UV)", act: 1518000, tgt: 1715000, cmpY: 976000, cmpW: 1405000, isPercent: false },
+          { label: "전환율", act: 2.7, tgt: 4.0, cmpY: 3.5, cmpW: 3.1, isPercent: true },
+          { label: "객단가", act: 63831, tgt: 57778, cmpY: 55441, cmpW: 61910, isPercent: false }
+        ]
+      },
+      weekly: {
+        periodSub: "",
+        cmpHintYear: "매출 비교: 주간 합계 전년 동주 · 일평균 전년 동요일",
+        cmpHintWeek: "매출 비교: 직전 주 동기간 · 일평균 직전 주",
+        salesAccK: "주간 매출 합계", salesDayK: "일평균 매출",
+        salesAccV: "612만원", salesDayV: "87만원",
+        salesAccGoal: 71, salesDayGoal: 62,
+        salesAcc: { y: "전년 동주 대비 +18% · 전년 518만", w: "직전 주 대비 +6% · 직전 주 577만" },
+        salesDay: { y: "전년 동요일 대비 +4% · 전년 84만", w: "전주 동요일 대비 +2% · 전주 85만" },
+        uv: { v: "35.2만 / 7,205", c: "주간 목표 92% · 대표일 목표 61%", y: "UV 전년 동주 +12%", w: "UV 직전 주 +3%" },
+        cv: { v: "2.9% / 2.5%", c: "주간 목표 대비 소폭 미달", y: "전환 전년 동주 -0.2%p", w: "전환 직전 주 +0.1%p" },
+        aov: { v: "62,100원 / 60,400원", c: "주간·대표일 모두 목표 초과", y: "객단가 전년 +9%", w: "객단가 직전 주 +1.2%" },
+        newV: "20.1만", newC: "대표일 5,820명",
+        retV: "15.1만", retC: "대표일 1,385명",
+        appV: "39%", appC: "대표일 42% (+2%p)",
+        mauK: "WAU", mauV: "41,200명", mauC: "대표일 DAU 38,900명",
+        funnelLeftTitle: "주간 누적 퍼널", funnelRightTitle: "주 대표일 퍼널",
+        funnelAcc: [100, 74, 13, 3.0], funnelDay: [100, 70, 11.2, 2.6],
+        rrV: "10.2% / 12%", rrC: "주간 목표 근접",
+        rpV: "23% / 20%", rpC: "직전 주 대비 -1%p",
+        service: {
+          dl: { main: 8120, unit: "건", goal: 12400, pct: 65, dayLbl: "대표일", day: 142, dayUnit: "건", dgoal: 318, dpct: 45, cum: 2756230 },
+          join: { main: 15400, unit: "명", goal: 20800, pct: 74, dayLbl: "대표일", day: 268, dayUnit: "명", dgoal: 1070, dpct: 25, cum: 3108379 },
+          coupon: { main: 118, unit: "만원", barPct: 58, status: "서비스 기준 · 정상", cnt: 812, avg: 14520, dayLbl: "주간 대표일 사용", dayAmt: "6.2만원" }
+        },
+        kpiTable: [
+          { label: "주간 매출 합계", act: 6120000, tgt: 8600000, cmpY: 5180000, cmpW: 5770000, isPercent: false },
+          { label: "일평균 매출", act: 870000, tgt: 1400000, cmpY: 840000, cmpW: 850000, isPercent: false },
+          { label: "유입(UV)", act: 352000, tgt: 380000, cmpY: 315000, cmpW: 342000, isPercent: false },
+          { label: "전환율", act: 2.9, tgt: 3.5, cmpY: 3.1, cmpW: 2.95, isPercent: true },
+          { label: "객단가", act: 62100, tgt: 58000, cmpY: 59800, cmpW: 60400, isPercent: false }
+        ]
+      },
+      daily: {
+        periodSub: "2025년 4월 27일 · 기준: 주문",
+        cmpHintYear: "매출 비교: 당일 전년 동요일 · 전일은 참고 수치",
+        cmpHintWeek: "매출 비교: 당일 전주 동요일 · 전일 대비",
+        salesAccK: "당일 매출", salesDayK: "전일 매출",
+        salesAccV: "7,051만원", salesDayV: "7,665만원",
+        salesAccGoal: 35, salesDayGoal: 38,
+        salesAcc: { y: "전년 동요일 대비 -10% · 전년 7,858만", w: "전주 동요일 대비 -10% · 전주 7,834만" },
+        salesDay: { y: "전년 동요일(전일) 대비 -5% · 전년 8,070만", w: "전일 대비 -8% · 전일 7,665만" },
+        uv: { v: "50,440명", c: "당일 목표 55%", y: "UV 전년 동요일 +44% · 전년 34,910명", w: "UV 전주 동요일 +6% · 47,590명" },
+        cv: { v: "2.3%", c: "당일 목표 미달", y: "전환 전년 동요일 -1.7%p · 전년 4.0%", w: "전환 전주 동요일 -0.3%p · 전주 2.6%" },
+        aov: { v: "59,608원", c: "당일 목표 초과", y: "객단가 전년 동요일 +6% · 56,336원", w: "객단가 전주 동요일 +2.4% · 58,210원" },
+        newV: "2.91만", newC: "UV 대비 57.7%",
+        retV: "2.13만", retC: "UV 대비 42.3%",
+        appV: "41%", appC: "누적 대비 +3%p",
+        mauK: "DAU", mauV: "177,458명", mauC: "목표 104%",
+        funnelLeftTitle: "당일 퍼널", funnelRightTitle: "전일 퍼널",
+        funnelAcc: [100, 68, 10.8, 2.3], funnelDay: [100, 71, 11.6, 2.4],
+        rrV: "15%", rrC: "당일 목표 10% 초과",
+        rpV: "21%", rpC: "누적 대비 -3%p",
+        service: {
+          dl: { main: 1176, unit: "건", goal: 2727, pct: 43, dayLbl: "전일", day: 1280, dayUnit: "건", dgoal: 2600, dpct: 49, cum: 2756230 },
+          join: { main: 1130, unit: "명", goal: 4545, pct: 25, dayLbl: "전일", day: 1188, dayUnit: "명", dgoal: 4400, dpct: 27, cum: 3108379 },
+          coupon: { main: 38, unit: "만원", barPct: 55, status: "서비스 기준 · 정상", cnt: 210, avg: 18095, dayLbl: "당일 사용 금액", dayAmt: "38만원" }
+        },
+        kpiTable: [
+          { label: "당일 매출", act: 70510000, tgt: 200000000, cmpY: 78580000, cmpW: 78340000, isPercent: false },
+          { label: "전일 매출", act: 76650000, tgt: 200000000, cmpY: 80700000, cmpW: 76650000, isPercent: false },
+          { label: "유입(UV)", act: 50440, tgt: 90909, cmpY: 34910, cmpW: 47590, isPercent: false },
+          { label: "전환율", act: 2.3, tgt: 4.0, cmpY: 4.0, cmpW: 2.6, isPercent: true },
+          { label: "객단가", act: 59608, tgt: 55000, cmpY: 56336, cmpW: 58210, isPercent: false }
+        ]
+      }
+    };
+
+    /** 요약판 표용 (첨부 예시 수치) */
+    const KPI_SUMMARY = [
+      { label: "누적매출", act: 1500000000, tgt: 2000000000, cmpY: 1120000000, cmpW: 1200000000, isPercent: false },
+      { label: "당일매출", act: 150000000, tgt: 200000000, cmpY: 140000000, cmpW: 145000000, isPercent: false },
+      { label: "유입(UV)", act: 100000, tgt: 200000, cmpY: 80000, cmpW: 92000, isPercent: false },
+      { label: "전환율", act: 3.5, tgt: 2, cmpY: 3.0, cmpW: 3.2, isPercent: true },
+      { label: "객단가", act: 57000, tgt: 50000, cmpY: 52000, cmpW: 53500, isPercent: false }
+    ];
+
+    let detailMode = "monthly";
+    let detailCmp = "year";
+    let anchorDate = "2025-04-27";
+
+    function cmpClass(text){
+      if(!text) return "";
+      if(/↑|\+[0-9]/.test(text)) return "up";
+      if(/↓|-[0-9]/.test(text)) return "down";
+      return "";
+    }
+
+    function setTextCls(id, text, cls){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.textContent = text;
+      el.className = "c" + (cls ? " " + cls : "");
+    }
+
+    function parseYMD(s){
+      const p = (s || "").split("-").map(Number);
+      return new Date(p[0], p[1] - 1, p[2] || 1);
+    }
+
+    function fmtDotDate(dt){
+      const y = dt.getFullYear(), m = String(dt.getMonth() + 1).padStart(2, "0"), d = String(dt.getDate()).padStart(2, "0");
+      return y + "." + m + "." + d;
+    }
+
+    /** 조회 기준일의 바로 이전 주: 월요일 00:00 ~ 일요일 (7일) */
+    function getPrevWeekMonSun(anchorYmd){
+      const d = parseYMD(anchorYmd);
+      d.setHours(12, 0, 0, 0);
+      const dow = d.getDay();
+      const toMonday = dow === 0 ? -6 : 1 - dow;
+      const thisMon = new Date(d);
+      thisMon.setDate(d.getDate() + toMonday);
+      const prevMon = new Date(thisMon);
+      prevMon.setDate(thisMon.getDate() - 7);
+      const prevSun = new Date(prevMon);
+      prevSun.setDate(prevMon.getDate() + 6);
+      return { mon: prevMon, sun: prevSun };
+    }
+
+    function buildPeriodSub(){
+      if(detailMode === "monthly") return DETAIL.monthly.periodSub;
+      if(detailMode === "daily"){
+        const v = document.getElementById("detailDailyDateInput").value || anchorDate;
+        return fmtDotDate(parseYMD(v)) + " · 스냅샷 · 기준: 주문";
+      }
+      if(detailMode === "weekly"){
+        const { mon, sun } = getPrevWeekMonSun(anchorDate);
+        return "전주 (월–일) " + fmtDotDate(mon) + " – " + fmtDotDate(sun) + " · 조회 기준 " + fmtDotDate(parseYMD(anchorDate)) + " · 기준: 주문";
+      }
+      return "";
+    }
+
+    function getActiveMainTab(){
+      const p = document.querySelector(".tab-pane.active");
+      return p && p.id === "detail" ? "detail" : "summary";
+    }
+
+    function kpiAchievePct(row){
+      if(row.isPercent) return row.tgt ? (row.act / row.tgt) * 100 : 0;
+      return row.tgt ? (row.act / row.tgt) * 100 : 0;
+    }
+
+    function kpiAchieveClass(pct){
+      if(pct >= 100) return "ok";
+      return "bad";
+    }
+
+    function fmtKpiNum(row, val){
+      if(row.isPercent) return (typeof val === "number" ? val.toFixed(2) : val) + "%";
+      return fmt(Math.round(val));
+    }
+
+    function growthVs(row){
+      const cmp = detailCmp === "year" ? row.cmpY : row.cmpW;
+      if(cmp == null || cmp === 0) return { text: "—", cls: "" };
+      const g = ((row.act - cmp) / cmp) * 100;
+      const s = (Math.round(g * 10) / 10).toLocaleString("ko-KR");
+      const text = (g >= 0 ? "+" : "") + s + "%";
+      const cls = g > 0 ? "up" : g < 0 ? "down" : "";
+      return { text, cls };
+    }
+
+    function refreshKpiTable(){
+      const tab = getActiveMainTab();
+      document.getElementById("kpiFilterColHead").textContent = detailCmp === "year" ? "전년 실적" : "전주 실적";
+      document.getElementById("kpiGrowthColHead").textContent = detailCmp === "year" ? "성장률(전년 대비)" : "성장률(전주 대비)";
+
+      const rows = tab === "summary" ? KPI_SUMMARY : (DETAIL[detailMode].kpiTable || KPI_SUMMARY);
+      const meta = tab === "summary"
+        ? "요약판 수치 기준 · 비교: " + (detailCmp === "year" ? "전년" : "전주") + " (표는 상세판 타이틀 바로 아래에도 동일하게 반영됩니다)"
+        : "상세판 · " + buildPeriodSub() + " · 비교: " + (detailCmp === "year" ? "전년" : "전주");
+      const metaEl = document.getElementById("kpiTableMeta");
+      if(metaEl) metaEl.textContent = meta;
+
+      const tbody = document.getElementById("kpiTableBody");
+      if(!tbody) return;
+      tbody.innerHTML = "";
+      rows.forEach(row => {
+        const pct = kpiAchievePct(row);
+        const pctRounded = Math.round(pct * 10) / 10;
+        const achCls = kpiAchieveClass(pct);
+        const cmp = detailCmp === "year" ? row.cmpY : row.cmpW;
+        const g = growthVs(row);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.label}</td>
+          <td>${fmtKpiNum(row, row.act)}</td>
+          <td>${fmtKpiNum(row, row.tgt)}</td>
+          <td><span class="kpi-pct ${achCls}">${pctRounded}%</span></td>
+          <td>${cmp == null ? "—" : fmtKpiNum(row, cmp)}</td>
+          <td><span class="kpi-gr ${g.cls}">${g.text}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function fillService(svc){
+      if(!svc) return;
+      const a = svc.dl, b = svc.join, c = svc.coupon;
+      document.getElementById("svcDlMain").textContent = fmt(a.main);
+      document.getElementById("svcDlUnit").textContent = a.unit || "건";
+      document.getElementById("svcDlGoal").textContent = "목표 " + fmt(a.goal) + " · " + a.pct + "%";
+      document.getElementById("svcDlGoal").className = "svc-goal " + (a.pct < 100 ? "bad" : "ok");
+      document.getElementById("svcDlBar").style.width = Math.min(a.pct, 100) + "%";
+      document.getElementById("svcDlBar").className = "svc-bar-fill " + (a.pct < 100 ? "warn" : "ok");
+      document.getElementById("svcDlDayLbl").textContent = a.dayLbl || "당일";
+      document.getElementById("svcDlDayVal").textContent = fmt(a.day) + (a.dayUnit || "건");
+      const dlShort = a.dpct < 100;
+      document.getElementById("svcDlDayMeta").textContent = "목표 " + fmt(a.dgoal) + " · " + a.dpct + "%" + (dlShort ? " · 미달" : "");
+      document.getElementById("svcDlDayMeta").className = "svc-day-meta" + (dlShort ? " bad" : "");
+      document.getElementById("svcDlCum").textContent = "총 누적 " + fmt(a.cum) + "건";
+
+      document.getElementById("svcJoinMain").textContent = fmt(b.main);
+      document.getElementById("svcJoinUnit").textContent = b.unit || "명";
+      document.getElementById("svcJoinGoal").textContent = "목표 " + fmt(b.goal) + " · " + b.pct + "%";
+      document.getElementById("svcJoinGoal").className = "svc-goal " + (b.pct < 100 ? "bad" : "ok");
+      document.getElementById("svcJoinBar").style.width = Math.min(b.pct, 100) + "%";
+      document.getElementById("svcJoinBar").className = "svc-bar-fill " + (b.pct < 100 ? "warn" : "ok");
+      document.getElementById("svcJoinDayLbl").textContent = b.dayLbl || "당일";
+      document.getElementById("svcJoinDayVal").textContent = fmt(b.day) + (b.dayUnit || "명");
+      const jShort = b.dpct < 100;
+      document.getElementById("svcJoinDayMeta").textContent = "목표 " + fmt(b.dgoal) + " · " + b.dpct + "%" + (jShort ? " · 미달" : "");
+      document.getElementById("svcJoinDayMeta").className = "svc-day-meta" + (jShort ? " bad" : "");
+      document.getElementById("svcJoinCum").textContent = "총 누적 " + fmt(b.cum) + "명";
+
+      document.getElementById("svcCpMain").textContent = fmt(c.main);
+      document.getElementById("svcCpUnit").textContent = c.unit || "만원";
+      document.getElementById("svcCpGoal").textContent = c.status || "서비스 기준 · 정상";
+      document.getElementById("svcCpGoal").className = "svc-goal ok";
+      document.getElementById("svcCpBar").style.width = Math.min(c.barPct || 60, 100) + "%";
+      document.getElementById("svcCpBar").className = "svc-bar-fill ok";
+      document.getElementById("svcCpCnt").textContent = fmt(c.cnt) + "건";
+      document.getElementById("svcCpAvg").textContent = fmt(c.avg) + "원";
+      document.getElementById("svcCpDayLbl").textContent = c.dayLbl || "당일 사용 금액";
+      document.getElementById("svcCpDayAmt").textContent = c.dayAmt || "";
+    }
+
+    function refreshDetail(){
+      if(detailMode === "daily"){
+        const v = document.getElementById("detailDailyDateInput").value;
+        if(v) anchorDate = v;
+      }
+      const d = DETAIL[detailMode];
+      const key = detailCmp === "year" ? "y" : "w";
+      document.getElementById("detailPeriodSub").textContent = buildPeriodSub();
+      document.getElementById("detailCmpHint").textContent = detailCmp === "year" ? d.cmpHintYear : d.cmpHintWeek;
+
+      const snap = document.getElementById("dailySnapshotRow");
+      if(detailMode === "daily") snap.classList.add("show");
+      else snap.classList.remove("show");
+
+      document.getElementById("detailSalesAccK").textContent = d.salesAccK;
+      document.getElementById("detailSalesDayK").textContent = d.salesDayK;
+      document.getElementById("detailSalesAccV").textContent = d.salesAccV;
+      document.getElementById("detailSalesDayV").textContent = d.salesDayV;
+
+      const accLine = d.salesAcc[key] + " · 목표 달성 " + d.salesAccGoal + "%";
+      const dayLine = d.salesDay[key] + " · 목표 달성 " + d.salesDayGoal + "%";
+      setTextCls("detailSalesAccC", accLine, cmpClass(d.salesAcc[key]));
+      setTextCls("detailSalesDayC", dayLine, cmpClass(d.salesDay[key]));
+
+      document.getElementById("detailUvV").textContent = d.uv.v;
+      document.getElementById("detailUvC").textContent = d.uv.c;
+      document.getElementById("detailUvCmp").textContent = d.uv[key];
+      document.getElementById("detailCvV").textContent = d.cv.v;
+      document.getElementById("detailCvC").textContent = d.cv.c;
+      document.getElementById("detailCvC").className = "c" + (d.cv.c && d.cv.c.includes("미달") ? " down" : "");
+      document.getElementById("detailCvCmp").textContent = d.cv[key];
+      document.getElementById("detailAovV").textContent = d.aov.v;
+      document.getElementById("detailAovC").textContent = d.aov.c;
+      document.getElementById("detailAovC").className = "c" + (d.aov.c && d.aov.c.includes("초과") ? " up" : "");
+      document.getElementById("detailAovCmp").textContent = d.aov[key];
+
+      document.getElementById("detailNewV").textContent = d.newV;
+      document.getElementById("detailNewC").textContent = d.newC;
+      document.getElementById("detailRetV").textContent = d.retV;
+      document.getElementById("detailRetC").textContent = d.retC;
+      document.getElementById("detailAppV").textContent = d.appV;
+      document.getElementById("detailAppC").textContent = d.appC;
+      document.getElementById("detailAppC").className = "c up";
+      document.getElementById("detailMauK").textContent = d.mauK;
+      document.getElementById("detailMauV").textContent = d.mauV;
+      document.getElementById("detailMauC").textContent = d.mauC;
+      document.getElementById("detailMauC").className = "c up";
+
+      document.getElementById("detailFunnelLeftTitle").textContent = d.funnelLeftTitle;
+      document.getElementById("detailFunnelRightTitle").textContent = d.funnelRightTitle;
+      const acc = d.funnelAcc, day = d.funnelDay;
+      const fmtPct = v => v + "%";
+      for(let i = 0; i < 4; i++){
+        const wAcc = Math.min(acc[i], 100);
+        const wDay = Math.min(day[i], 100);
+        document.getElementById("fAcc" + (i + 1)).style.width = wAcc + "%";
+        document.getElementById("fAcc" + (i + 1) + "p").textContent = fmtPct(acc[i]);
+        document.getElementById("fDay" + (i + 1)).style.width = wDay + "%";
+        document.getElementById("fDay" + (i + 1) + "p").textContent = fmtPct(day[i]);
+      }
+
+      document.getElementById("detailRrV").textContent = d.rrV;
+      document.getElementById("detailRrC").textContent = d.rrC;
+      document.getElementById("detailRrC").className = "c down";
+      document.getElementById("detailRpV").textContent = d.rpV;
+      document.getElementById("detailRpC").textContent = d.rpC;
+      document.getElementById("detailRpC").className = "c" + (d.rpC && d.rpC.includes("-") ? " down" : "");
+
+      if(d.service) fillService(d.service);
+      renderExternalChannelMix(detailMode);
+
+      document.querySelectorAll(".chip[data-mode]").forEach(ch => {
+        ch.classList.toggle("active", ch.getAttribute("data-mode") === detailMode);
+      });
+      document.querySelectorAll(".cmp-btn[data-cmp]").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-cmp") === detailCmp);
+      });
+      refreshKpiTable();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+        if(btn.dataset.tab === "detail") refreshDetail();
+        else refreshKpiTable();
+      });
+    });
+
+    document.querySelectorAll(".chip[data-mode]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        detailMode = btn.getAttribute("data-mode");
+        if(detailMode === "daily"){
+          const inp = document.getElementById("detailDailyDateInput");
+          if(inp) inp.value = anchorDate;
+        }
+        refreshDetail();
+      });
+    });
+
+    document.getElementById("detailDailyDateInput").addEventListener("change", () => {
+      anchorDate = document.getElementById("detailDailyDateInput").value || anchorDate;
+      refreshDetail();
+    });
+
+    document.querySelectorAll(".cmp-btn[data-cmp]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        detailCmp = btn.getAttribute("data-cmp");
+        if(getActiveMainTab() === "detail") refreshDetail();
+        else refreshKpiTable();
+      });
+    });
+
+    const top5Pages = [
+      ["/promotion/2025-spring", 184200, 312000000],
+      ["/collection/best-outer", 142800, 268000000],
+      ["/deal/today-flash", 96700, 198000000],
+      ["/pages/brand-week", 75100, 152400000],
+      ["/category/shoes-running", 62400, 118500000]
+    ];
+    const top5Cats = [
+      ["패션 > 아우터 > 패딩", 980, 198000000],
+      ["뷰티 > 스킨케어 > 세트", 1410, 186000000],
+      ["라이프 > 리빙 > 침구", 620, 124000000],
+      ["식품 > 건강 > 단백질", 2680, 118000000],
+      ["잡화 > 가방 > 백팩", 1120, 98000000]
+    ];
+    // 요약판: 최근 7일 (UV, 매출 실적, 매출 목표)
+    const summaryTrend7 = [
+      ["월", 50440, 70510000, 200000000],
+      ["화", 47620, 67800000, 200000000],
+      ["수", 49210, 69100000, 200000000],
+      ["목", 52100, 73400000, 200000000],
+      ["금", 55840, 81200000, 200000000],
+      ["토", 53110, 76800000, 200000000],
+      ["일", 48930, 64100000, 200000000]
+    ];
+    const CHANNEL_MIX = {
+      monthly: {
+        shares: [
+          ["채널 없음", 66.1, "#42a5f5"],
+          ["Naver", 18.2, "#ff6b6b"],
+          ["meta", 4.1, "#8e5ce6"],
+          ["naver_k", 3.2, "#5fd3b0"],
+          ["meta_k", 2.8, "#eab64b"],
+          ["google", 2.3, "#e91e63"],
+          ["criteo", 1.9, "#5aa9ff"],
+          ["ig", 1.4, "#ff7676"]
+        ],
+        stats: [
+          ["채널 없음", 312000000, 2.7, 66.1, +4.2],
+          ["Naver", 112000000, 2.9, 18.2, -1.8],
+          ["meta", 65400000, 2.4, 4.1, +0.7],
+          ["google", 52100000, 2.1, 2.3, -2.4],
+          ["criteo", 36600000, 3.2, 1.9, +1.6]
+        ]
+      },
+      weekly: {
+        shares: [
+          ["채널 없음", 58.4, "#42a5f5"],
+          ["Naver", 20.8, "#ff6b6b"],
+          ["meta", 6.7, "#8e5ce6"],
+          ["google", 4.3, "#e91e63"],
+          ["criteo", 3.6, "#5aa9ff"],
+          ["ig", 2.9, "#ff7676"],
+          ["meta_k", 2.1, "#eab64b"],
+          ["naver_k", 1.2, "#5fd3b0"]
+        ],
+        stats: [
+          ["채널 없음", 88400000, 2.5, 58.4, -3.1],
+          ["Naver", 39200000, 3.1, 20.8, +2.4],
+          ["meta", 15700000, 2.8, 6.7, +1.1],
+          ["google", 9800000, 2.2, 4.3, -0.9],
+          ["criteo", 7400000, 3.0, 3.6, +0.6]
+        ]
+      },
+      daily: {
+        shares: [
+          ["Naver", 28.1, "#ff6b6b"],
+          ["채널 없음", 26.4, "#42a5f5"],
+          ["meta", 15.2, "#8e5ce6"],
+          ["google", 9.7, "#e91e63"],
+          ["criteo", 8.1, "#5aa9ff"],
+          ["ig", 5.4, "#ff7676"],
+          ["meta_k", 4.0, "#eab64b"],
+          ["naver_k", 3.1, "#5fd3b0"]
+        ],
+        stats: [
+          ["Naver", 18400000, 3.4, 28.1, +6.2],
+          ["채널 없음", 17100000, 2.6, 26.4, -4.8],
+          ["meta", 9400000, 2.9, 15.2, +1.9],
+          ["google", 6700000, 2.2, 9.7, -3.5],
+          ["criteo", 5300000, 3.1, 8.1, +0.4]
+        ]
+      }
+    };
+
+    function renderTop5ProductDash(){
+      const pb = document.getElementById("top5PagesBody");
+      const cb = document.getElementById("top5CatsBody");
+      if(!pb || !cb) return;
+      pb.innerHTML = "";
+      cb.innerHTML = "";
+      top5Pages.forEach((row, i) => {
+        const uv = row[1], rev = row[2];
+        const perUv = Math.round(rev / uv);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${i + 1}</td><td>${row[0]}</td><td>${fmt(uv)}</td><td>${fmt(rev)}</td><td class="pd-eff">${fmt(perUv)}원</td>`;
+        pb.appendChild(tr);
+      });
+      top5Cats.forEach((row, i) => {
+        const ord = row[1], rev = row[2];
+        const perOrd = Math.round(rev / ord);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${i + 1}</td><td>${row[0]}</td><td>${fmt(ord)}</td><td>${fmt(rev)}</td><td class="pd-eff">${fmt(perOrd)}원</td>`;
+        cb.appendChild(tr);
+      });
+    }
+    function renderSummaryRev7(){
+      const svg = document.getElementById("summaryRev7Svg");
+      if(!svg) return;
+      const w = 520, h = 150, padX = 24, padY = 12;
+      const innerW = w - padX * 2;
+      const days = summaryTrend7.map(d => d[0]);
+      const rev = summaryTrend7.map(d => d[2]);
+      const tgt = summaryTrend7.map(d => d[3]);
+
+      const top = padY;
+      const chartH = h - padY * 2 - 10;
+      const axisY = top + chartH;
+      const scaleX = i => padX + (innerW / (days.length - 1 || 1)) * i;
+      const maxRev = Math.max(...rev, ...tgt, 1);
+      const scaleY = v => top + (chartH - (v / maxRev) * chartH);
+
+      const dayLabels = days.map((d, i) => `<text x="${scaleX(i)}" y="${h-4}" text-anchor="middle" fill="#64748b" font-size="10">${d}</text>`).join("");
+      const revPts = rev.map((v, i) => `${scaleX(i)},${scaleY(v)}`).join(" ");
+      const revDots = rev.map((v, i) => `<circle cx="${scaleX(i)}" cy="${scaleY(v)}" r="2.8" fill="#16a34a"/>`).join("");
+
+      svg.innerHTML = `
+        <line x1="${padX}" y1="${axisY}" x2="${w-padX}" y2="${axisY}" stroke="#cbd5e1" stroke-width="1"/>
+        <text x="${padX}" y="${top+10}" fill="#64748b" font-size="10">매출</text>
+        <polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="${revPts}"/>
+        ${revDots}
+        ${dayLabels}`;
+    }
+    function renderExternalChannelMix(mode){
+      const data = CHANNEL_MIX[mode] || CHANNEL_MIX.monthly;
+      const externalChannels = data.shares;
+      const donut = document.getElementById("externalChannelDonut");
+      const legend = document.getElementById("externalChannelLegend");
+      const top3 = document.getElementById("externalChannelTop3");
+      const alerts = document.getElementById("externalChannelAlerts");
+      if(!donut || !legend) return;
+      const grad = [];
+      let acc = 0;
+      externalChannels.forEach(ch => {
+        const s = acc;
+        acc += ch[1];
+        grad.push(`${ch[2]} ${s}% ${acc}%`);
+      });
+      donut.style.background = `conic-gradient(${grad.join(",")})`;
+      document.getElementById("extChMainLabel").textContent = externalChannels[0][0];
+      document.getElementById("extChMainPct").textContent = externalChannels[0][1].toFixed(1) + "%";
+      legend.innerHTML = "";
+      externalChannels.forEach(ch => {
+        const item = document.createElement("div");
+        item.className = "legend-item";
+        item.innerHTML = `<span class="dot" style="background:${ch[2]}"></span><span>${ch[0]}</span><strong style="margin-left:auto">${ch[1].toFixed(1)}%</strong>`;
+        legend.appendChild(item);
+      });
+      if(top3){
+        top3.innerHTML = "";
+        const sorted = [...data.stats].sort((a,b)=>b[1]-a[1]).slice(0,3);
+        sorted.forEach(r => {
+          const d = r[4];
+          const badgeCls = d >= 0 ? "up" : "down";
+          const badgeTxt = (d >= 0 ? "+" : "") + d.toFixed(1) + "%";
+          const el = document.createElement("div");
+          el.className = "mix-item";
+          el.innerHTML = `
+            <div class="name">${r[0]}</div>
+            <div class="meta">
+              <span>매출 <b>${fmt(r[1])}</b></span>
+              <span>CVR <b>${r[2].toFixed(1)}%</b></span>
+              <span class="mix-badge ${badgeCls}">${badgeTxt}</span>
+            </div>`;
+          top3.appendChild(el);
+        });
+      }
+      if(alerts){
+        alerts.innerHTML = "";
+        const drops = [...data.stats].filter(r => r[4] < 0).sort((a,b)=>a[4]-b[4]);
+        const rises = [...data.stats].filter(r => r[4] > 0).sort((a,b)=>b[4]-a[4]);
+        const items = [];
+        if(drops[0]) items.push(`매출 변화가 큰 하락 채널: <b>${drops[0][0]}</b> (${drops[0][4].toFixed(1)}%)`);
+        if(rises[0]) items.push(`매출 변화가 큰 상승 채널: <b>${rises[0][0]}</b> (+${rises[0][4].toFixed(1)}%)`);
+        if(items.length === 0) items.push("급변 채널이 감지되지 않았습니다.");
+        items.forEach(t => {
+          const li = document.createElement("li");
+          li.innerHTML = t;
+          alerts.appendChild(li);
+        });
+      }
+    }
+
+    renderTop20("top20BodySummary", false);
+    renderTop20("top20BodyDetail", true);
+    renderTop5ProductDash();
+    renderSummaryRev7();
+    renderExternalChannelMix(detailMode);
+    refreshDetail();
+  </script>
+</body>
+</html>
