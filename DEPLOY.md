@@ -18,11 +18,12 @@ git remote add origin https://github.com/woong1-cloud/NEED.git
 git push -u origin main
 ```
 
-## 3단계: GitHub Pages 켜기
+## 3단계: GitHub Pages 켜기 (최초 1회)
 
 1. 저장소 → **Settings** → **Pages**
-2. **Build and deployment** → Source: **GitHub Actions**
-3. Actions 탭에서 `Deploy GitHub Pages` 워크플로가 초록색으로 끝나면 완료
+2. **Build and deployment** → Source: **Deploy from a branch**
+3. Branch: **gh-pages** / **/ (root)** → Save
+4. Actions 탭에서 `Deploy GitHub Pages` 워크플로가 초록색으로 끝나면 1~2분 후 URL 접속
 
 ## 팀 공유 URL
 
